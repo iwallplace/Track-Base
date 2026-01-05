@@ -75,6 +75,10 @@ export const translations = {
         current_stock: 'Mevcut stok',
         requested: 'İstenen',
 
+        confirm_delete_message: 'Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+        search_placeholder: 'Ara...',
+        records: 'kayıt',
+        no_results: 'Sonuç bulunamadı.',
     },
     en: {
         // Navigation
@@ -99,8 +103,12 @@ export const translations = {
         search: 'Search...',
         loading: 'Loading...',
         confirm_delete: 'Are you sure you want to delete?',
+        confirm_delete_message: 'Are you sure you want to delete this record? This action cannot be undone.',
         success: 'Operation successful',
         error: 'An error occurred',
+        search_placeholder: 'Search...',
+        records: 'records',
+        no_results: 'No results found.',
 
         // Inventory Page
         inventory_title: 'Stock Tracking',
