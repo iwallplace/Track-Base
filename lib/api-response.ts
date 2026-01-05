@@ -55,7 +55,6 @@ export function devLog(...args: unknown[]) {
 }
 
 export function devError(...args: unknown[]) {
-    if (process.env.NODE_ENV !== 'production') {
-        console.error(...args);
-    }
+    // Log errors in all environments for debugging purposes
+    console.error(...args);
 }

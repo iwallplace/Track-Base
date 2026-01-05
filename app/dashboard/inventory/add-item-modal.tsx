@@ -12,11 +12,18 @@ interface AddItemModalProps {
 
 export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddItemModalProps) {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        company: string;
+        waybillNo: string;
+        materialReference: string;
+        stockCount: number | '';
+        lastAction: 'Giriş' | 'Çıkış';
+        note: string;
+    }>({
         company: '',
         waybillNo: '',
         materialReference: '',
-        stockCount: 0,
+        stockCount: '',
         lastAction: mode,
         note: ''
     });
@@ -27,10 +34,18 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
         e.preventDefault();
 
         // Manual validation for strictness
-        if (!formData.materialReference || !formData.waybillNo || formData.stockCount <= 0) {
+        const stockVal = typeof formData.stockCount === 'number' ? formData.stockCount : 0;
+        if (!formData.materialReference || !formData.waybillNo || stockVal <= 0) {
             alert("Lütfen zorunlu alanları doldurunuz (Referans, İrsaliye, Stok)");
             return;
         }
+
+        // Tam sayı kontrolü - ondalıklı değerleri reddet
+        if (!Number.isInteger(stockVal)) {
+            alert("Stok adedi tam sayı olmalıdır (ondalıklı değer girilemez)");
+            return;
+        }
+
 
         if (mode === 'Giriş' && !formData.company) {
             alert("Lütfen firma adını giriniz");
@@ -50,9 +65,11 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                 onSuccess();
                 onClose();
                 // Reset form
-                setFormData({ ...formData, waybillNo: '', materialReference: '', stockCount: 0, note: '' });
+                setFormData({ ...formData, waybillNo: '', materialReference: '', stockCount: '', note: '' });
             } else {
-                alert('Hata oluştu.');
+                // API'den gelen hata mesajını göster
+                const data = await res.json();
+                alert(data.error || 'Hata oluştu.');
             }
         } catch (error) {
             console.error(error);
@@ -126,9 +143,22 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                             <input
                                 type="number"
                                 min="1"
+                                step="1"
                                 required
+                                placeholder="Adet giriniz"
                                 value={formData.stockCount}
-                                onChange={(e) => setFormData({ ...formData, stockCount: parseInt(e.target.value) || 0 })}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    // Sadece tam sayı değerleri kabul et
+                                    const intVal = parseInt(val) || 0;
+                                    setFormData({ ...formData, stockCount: intVal });
+                                }}
+                                onKeyDown={(e) => {
+                                    // Nokta ve virgül girişini engelle
+                                    if (e.key === '.' || e.key === ',') {
+                                        e.preventDefault();
+                                    }
+                                }}
                                 className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
                             />
                         </div>

@@ -44,7 +44,10 @@ export const createInventoryItemSchema = z.object({
     company: z.string().optional(),
     waybillNo: z.string().min(1, "İrsaliye numarası gerekli"),
     materialReference: z.string().min(1, "Malzeme referansı gerekli"),
-    stockCount: z.union([z.string(), z.number()]).transform(v => Number(v)),
+    stockCount: z.union([z.string(), z.number()])
+        .transform(v => Number(v))
+        .refine(v => Number.isInteger(v), { message: "Stok adedi tam sayı olmalıdır" })
+        .refine(v => v > 0, { message: "Stok adedi 0'dan büyük olmalıdır" }),
     lastAction: z.enum(['Giriş', 'Çıkış']).default('Giriş'),
     note: z.string().optional()
 });
@@ -52,14 +55,14 @@ export const createInventoryItemSchema = z.object({
 // ==================== PROFILE SCHEMAS ====================
 
 export const updateProfileSchema = z.object({
-    name: z.string().min(2).optional(),
-    username: z.string().min(3).optional(),
-    currentPassword: z.string().optional(),
-    newPassword: z.string().min(6).optional(),
+    name: z.string().min(2).optional().or(z.literal('')),
+    username: z.string().min(3).optional().or(z.literal('')),
+    currentPassword: z.string().optional().or(z.literal('')),
+    newPassword: z.string().min(6).optional().or(z.literal('')),
     image: z.string().optional()
 }).refine(data => {
-    // If newPassword is provided, currentPassword must also be provided
-    if (data.newPassword && !data.currentPassword) {
+    // If newPassword is provided (and not empty), currentPassword must also be provided
+    if (data.newPassword && data.newPassword.length > 0 && !data.currentPassword) {
         return false;
     }
     return true;

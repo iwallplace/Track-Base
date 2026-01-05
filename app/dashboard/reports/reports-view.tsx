@@ -173,13 +173,6 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                     <Download className="h-4 w-4" />
                     PDF İndir
                 </button>
-                <button
-                    onClick={handleExportExcel}
-                    className="flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Excel İndir
-                </button>
             </div>
 
             {/* AI Summary Section */}
