@@ -184,7 +184,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         const turnoverRate = totalStock > 0 ? ((totalExits / totalStock) * 100).toFixed(1) : "0.0";
 
         // 8. Stok Uyarıları (Low Stock Items)
-        const lowStockItems = await prisma.inventoryItem.findMany({
+        const lowStockItemsRaw = await prisma.inventoryItem.findMany({
             where: {
                 stockCount: { lt: 20, gt: 0 },
                 ...dateFilter
@@ -198,6 +198,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 stockCount: true
             }
         });
+        const lowStockItems = lowStockItemsRaw.map(item => ({
+            ...item,
+            company: item.company || ''
+        }));
 
 
 
