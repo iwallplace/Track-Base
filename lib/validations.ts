@@ -41,15 +41,15 @@ export const createInventoryItemSchema = z.object({
     month: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     week: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     date: z.string().optional(),
-    company: z.string().trim().optional(),
-    waybillNo: z.string().trim().min(1, "İrsaliye numarası gerekli"),
-    materialReference: z.string().trim().toUpperCase().min(1, "Malzeme referansı gerekli"),
+    company: z.string().trim().max(100, "Firma adı çok uzun").transform(v => v.toLocaleUpperCase('tr-TR')).optional(),
+    waybillNo: z.string().trim().max(50, "İrsaliye no çok uzun").min(1, "İrsaliye numarası gerekli").transform(v => v.toLocaleUpperCase('tr-TR')),
+    materialReference: z.string().trim().max(100, "Referans çok uzun").min(1, "Malzeme referansı gerekli").transform(v => v.toLocaleUpperCase('tr-TR')),
     stockCount: z.union([z.string(), z.number()])
         .transform(v => Number(v))
         .refine(v => Number.isInteger(v), { message: "Stok adedi tam sayı olmalıdır" })
         .refine(v => v > 0, { message: "Stok adedi 0'dan büyük olmalıdır" }),
     lastAction: z.enum(['Giriş', 'Çıkış']).default('Giriş'),
-    note: z.string().trim().optional()
+    note: z.string().trim().max(200, "Not çok uzun").transform(v => v.toLocaleUpperCase('tr-TR')).optional()
 });
 
 // ==================== PROFILE SCHEMAS ====================

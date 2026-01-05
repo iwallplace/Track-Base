@@ -204,20 +204,20 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        // Validate input
+        // Check Permissions (Fortress Level)
+        const ALLOWED_ROLES = ['ADMIN', 'IME', 'KALITE'];
+        if (!session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
+            console.warn(`[SECURITY] Unauthorized inventory creation attempt by user: ${session.user.id} (${session.user.role})`);
+            return forbiddenResponse("Bu işlem için yetkiniz yok (Gerekli: ADMIN, IME veya KALITE)");
+        }
+
+        // Zod validation handles uppercase transformation automatically now
         const validation = validate(createInventoryItemSchema, body);
         if (!validation.success) {
             return validationErrorResponse(validation.error);
         }
 
-        // Enforce Uppercase on critical fields
-        const data = {
-            ...validation.data,
-            company: validation.data.company?.toLocaleUpperCase('tr-TR') || "",
-            waybillNo: validation.data.waybillNo.toLocaleUpperCase('tr-TR'),
-            materialReference: validation.data.materialReference.toLocaleUpperCase('tr-TR'),
-            note: validation.data.note?.toLocaleUpperCase('tr-TR') || ""
-        };
+        const data = validation.data;
 
         // Calculate Date parts for Europe/Istanbul
         const now = new Date();
@@ -270,6 +270,7 @@ export async function POST(req: Request) {
             const currentStock = totalEntry - totalExit;
 
             if (currentStock < data.stockCount) {
+                console.warn(`[AUDIT] Failed Exit: Insufficient stock for ${data.materialReference}. Requested: ${data.stockCount}, Available: ${currentStock}`);
                 return errorResponse(`Yetersiz Stok! Mevcut stok: ${currentStock}, Çıkış istenen: ${data.stockCount}`);
             }
         }
@@ -289,6 +290,9 @@ export async function POST(req: Request) {
                 lastModifiedBy: session.user.id
             }
         });
+
+        // Audit Log
+        console.log(`[AUDIT] Inventory Action (${data.lastAction}): ${data.materialReference} | Qt: ${data.stockCount} | User: ${session.user.name} (${session.user.id})`);
 
         return successResponse(item, "Envanter kaydı oluşturuldu");
     } catch (error) {

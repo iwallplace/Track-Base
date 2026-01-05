@@ -62,34 +62,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     console.log("ReportsPage: Starting...");
     try {
         const session = await getServerSession(authOptions);
-        console.log("ReportsPage: Session Check", session ? "Found" : "Null");
-
-        const params = await searchParams;
-
-        // Support both new startDate/endDate format and legacy period format
-        let periodStart: Date | null = null;
-        let periodEnd: Date | null = null;
-        let period = "Tüm Zamanlar";
-
-        if (params.startDate && params.endDate) {
-            // New format from DateRangePicker
-            periodStart = new Date(params.startDate + 'T00:00:00');
-            periodEnd = new Date(params.endDate + 'T23:59:59');
-            period = `${params.startDate} - ${params.endDate}`;
-        } else if (params.period) {
-            // Legacy format
-            period = params.period;
-            const dateRange = getDateRangeFromPeriod(period);
-            periodStart = dateRange.start;
-            periodEnd = dateRange.end;
-        }
-
-        console.log("ReportsPage: Date Range", periodStart, periodEnd);
-
-        if (!session) {
-            redirect("/login");
-        }
-
+        if (!session) redirect("/login");
         if (session.user.role === 'USER') {
             return (
                 <div className="flex h-[50vh] flex-col items-center justify-center text-center">
@@ -99,55 +72,152 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             );
         }
 
-        // Get date range for filtering
+        const params = await searchParams;
+
+        // 1. Date Filter (for Activity Charts only)
+        // Global KPIs (Stock, Dead Stock, Critical) should reflect the CURRENT state of the warehouse,
+        // regardless of the selected date filter, unless specifically asked otherwise.
+        // However, for consistency with standard dashboard behavior, if a user filters "Last Month",
+        // they might expect "Transactions in Last Month".
+        // BUT "Critical Stock" (Low Stock) is a state, not a history. "Dead Stock" is a state.
+        // So we will calculate STATE -> Global, FLOW -> Filtered.
+
+        let periodStart: Date | null = null;
+        let periodEnd: Date | null = null;
+        let period = "Tüm Zamanlar";
+
+        if (params.startDate && params.endDate) {
+            periodStart = new Date(params.startDate + 'T00:00:00');
+            periodEnd = new Date(params.endDate + 'T23:59:59');
+            period = `${params.startDate} - ${params.endDate}`;
+        } else if (params.period) {
+            period = params.period;
+            const dateRange = getDateRangeFromPeriod(period);
+            periodStart = dateRange.start;
+            periodEnd = dateRange.end;
+        }
+
         const dateFilter = periodStart && periodEnd ? {
             createdAt: { gte: periodStart, lte: periodEnd }
         } : {};
 
-
-
-        // 2. Status Aggregation
-        console.log("ReportsPage: Fetching Status Counts...");
-        const statusCountsRaw = await prisma.inventoryItem.groupBy({
-            by: ['lastAction'],
-            _count: { _all: true },
-            where: dateFilter
-        });
-
-        const statusCounts = statusCountsRaw.map(item => ({
-            name: item.lastAction,
-            value: item._count._all,
-        }));
-
-        // 3. Monthly Activity (filtered by date range)
-        console.log("ReportsPage: Fetching Monthly Activity...");
-        const allItems = await prisma.inventoryItem.findMany({
+        // 2. Fetch ALL Data for accurate Stock Calculation (Snapshot)
+        // We need full history to calculate current balance of any material.
+        const allHistory = await prisma.inventoryItem.findMany({
             select: {
-                month: true,
+                id: true,
+                materialReference: true,
                 stockCount: true,
                 lastAction: true,
+                date: true,
+                createdAt: true,
+                company: true
             },
-            where: dateFilter,
             orderBy: { date: 'asc' }
         });
 
-        const monthlyMap = new Map<number, { entry: number; exit: number }>();
-        allItems.forEach(item => {
-            const month = item.month;
-            if (!monthlyMap.has(month)) {
-                monthlyMap.set(month, { entry: 0, exit: 0 });
+        // 3. Process Data In-Memory
+        // Group by Material Reference to find current status
+        const materialMap = new Map<string, {
+            balance: number;
+            totalEntry: number;
+            totalExit: number;
+            lastActivity: Date;
+            company: string;
+        }>();
+
+        allHistory.forEach(item => {
+            const ref = item.materialReference; // Normalized by Zod/Backend already
+
+            if (!materialMap.has(ref)) {
+                materialMap.set(ref, {
+                    balance: 0,
+                    totalEntry: 0,
+                    totalExit: 0,
+                    lastActivity: item.date,
+                    company: item.company || ''
+                });
             }
-            const current = monthlyMap.get(month)!;
-            if (item.lastAction === 'Sevk Edildi') {
-                current.exit += item.stockCount;
-            } else {
-                current.entry += item.stockCount;
+
+            const mat = materialMap.get(ref)!;
+
+            if (item.lastAction === 'Giriş') {
+                mat.balance += item.stockCount;
+                mat.totalEntry += item.stockCount;
+            } else if (item.lastAction === 'Çıkış') {
+                mat.balance -= item.stockCount;
+                mat.totalExit += item.stockCount;
+            }
+
+            if (item.date > mat.lastActivity) {
+                mat.lastActivity = item.date;
             }
         });
 
-        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+        // 4. Calculate Global Metrics (Snapshot)
+        let totalStock = 0;
+        let totalExitsGlobal = 0;
+        let lowStockCount = 0;
+        let deadStockCount = 0;
+        const lowStockList: any[] = [];
 
-        const monthlyActivity = Array.from(monthlyMap.entries())
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        materialMap.forEach((data, ref) => {
+            // Prevent negative stock artifacts in calculation
+            const safeBalance = Math.max(0, data.balance);
+
+            totalStock += safeBalance;
+            totalExitsGlobal += data.totalExit;
+
+            if (safeBalance > 0 && safeBalance < 20) {
+                lowStockCount++;
+                lowStockList.push({
+                    id: ref, // using ref as id for list
+                    materialReference: ref,
+                    company: data.company,
+                    stockCount: safeBalance
+                });
+            }
+
+            if (safeBalance > 0 && data.lastActivity < ninetyDaysAgo) {
+                deadStockCount++;
+            }
+        });
+
+        // Prepare Top Materials (By Transaction Volume - Filtered or Global? Usually Global or Filtered context)
+        // Let's use Filtered context for "Top Movers in this Period"
+        const filteredItems = (periodStart && periodEnd)
+            ? allHistory.filter(i => i.createdAt >= periodStart! && i.createdAt <= periodEnd!)
+            : allHistory;
+
+        // 5. Chart Data (Activity over time - Filtered)
+        const statusCountsMap = { 'Giriş': 0, 'Çıkış': 0 };
+        const monthlyActivityMap = new Map<number, { entry: number; exit: number }>();
+
+        filteredItems.forEach(item => {
+            // Status Counts
+            if (item.lastAction === 'Giriş') statusCountsMap['Giriş']++;
+            if (item.lastAction === 'Çıkış') statusCountsMap['Çıkış']++;
+
+            // Monthly Activity
+            const month = new Date(item.date).getMonth() + 1; // 1-12
+            if (!monthlyActivityMap.has(month)) {
+                monthlyActivityMap.set(month, { entry: 0, exit: 0 });
+            }
+            const mData = monthlyActivityMap.get(month)!;
+            if (item.lastAction === 'Giriş') mData.entry += item.stockCount;
+            if (item.lastAction === 'Çıkış') mData.exit += item.stockCount;
+        });
+
+        const statusCounts = [
+            { name: 'Giriş', value: statusCountsMap['Giriş'] },
+            { name: 'Çıkış', value: statusCountsMap['Çıkış'] }
+        ];
+
+        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+        const monthlyActivity = Array.from(monthlyActivityMap.entries())
             .map(([monthNum, counts]) => ({
                 name: monthNames[monthNum - 1] || `Ay ${monthNum}`,
                 entry: counts.entry,
@@ -155,83 +225,48 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             }))
             .sort((a, b) => monthNames.indexOf(a.name) - monthNames.indexOf(b.name));
 
-        // 4. Summary Metrics (filtered by date range)
-        console.log("ReportsPage: Fetching Summary Metrics...");
-        const totalStockAgg = await prisma.inventoryItem.aggregate({
-            _sum: { stockCount: true },
-            where: dateFilter
-        });
-        const totalStock = totalStockAgg._sum.stockCount || 0;
+
+        // 6. Turnover Rate
+        // Logic: (Total Exits / Current Total Stock) * 100
+        // Use global values for specific "Stock Turnover" snapshot
+        const turnoverRate = totalStock > 0
+            ? ((totalExitsGlobal / totalStock) * 100).toFixed(1)
+            : "0.0";
 
 
-
-        // 5. Enterprise-Level Advanced Metrics
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        const deadStockCount = await prisma.inventoryItem.count({
-            where: { updatedAt: { lt: ninetyDaysAgo }, stockCount: { gt: 0 } }
-        });
-
-        const lowStockCount = await prisma.inventoryItem.count({
-            where: { stockCount: { lt: 20, gt: 0 } }
-        });
-
-        const totalExitsAgg = await prisma.inventoryItem.aggregate({
-            _sum: { stockCount: true },
-            where: { lastAction: 'Sevk Edildi' }
-        });
-        const totalExits = totalExitsAgg._sum.stockCount || 0;
-        const turnoverRate = totalStock > 0 ? ((totalExits / totalStock) * 100).toFixed(1) : "0.0";
-
-        // 8. Stok Uyarıları (Low Stock Items)
-        const lowStockItemsRaw = await prisma.inventoryItem.findMany({
-            where: {
-                stockCount: { lt: 20, gt: 0 },
-                ...dateFilter
-            },
-            take: 5,
-            orderBy: { stockCount: 'asc' },
-            select: {
-                id: true,
-                materialReference: true,
-                company: true,
-                stockCount: true
+        // 7. Top Materials (Filtered by Date Range - showing movement volume)
+        const topMatMap = new Map<string, { count: number, stockSum: number }>();
+        filteredItems.forEach(item => {
+            if (!topMatMap.has(item.materialReference)) {
+                topMatMap.set(item.materialReference, { count: 0, stockSum: 0 });
             }
+            const tm = topMatMap.get(item.materialReference)!;
+            tm.count++;
+            tm.stockSum += item.stockCount;
         });
-        const lowStockItems = lowStockItemsRaw.map(item => ({
-            ...item,
-            company: item.company || ''
-        }));
 
+        const topMaterials = Array.from(topMatMap.entries())
+            .map(([ref, val]) => ({
+                reference: ref,
+                transactionCount: val.count,
+                totalStock: val.stockSum // This is volume moved, not balance
+            }))
+            .sort((a, b) => b.transactionCount - a.transactionCount)
+            .slice(0, 5);
 
-
-        // 10. En Hareketli Ürünler (by total transactions)
-        const topMaterialsRaw = await prisma.inventoryItem.groupBy({
-            by: ['materialReference'],
-            _count: { _all: true },
-            _sum: { stockCount: true },
-            orderBy: { _count: { materialReference: 'desc' } },
-            take: 5,
-            where: dateFilter
-        });
-        const topMaterials = topMaterialsRaw.map(m => ({
-            reference: m.materialReference,
-            transactionCount: m._count._all,
-            totalStock: m._sum.stockCount || 0
-        }));
 
         const data = {
             statusCounts,
             monthlyActivity,
-            totalStock,
-            turnoverRate,
-            deadStockCount,
-            lowStockCount,
-            lowStockItems,
+            totalStock, // Real current balance
+            turnoverRate, // Real turnover based on 'Çıkış'
+            deadStockCount, // Real dead stock (>90 days inactivity)
+            lowStockCount, // Real critical stock (<20 balance)
+            lowStockItems: lowStockList.slice(0, 5), // Top 5 critical items
             topMaterials
         };
 
-        console.log("ReportsPage: Ready to render.");
+        console.log("ReportsPage: Data calculated successfully.");
 
         return <ReportsView data={data} period={period} />;
 
