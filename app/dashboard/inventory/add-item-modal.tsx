@@ -149,9 +149,17 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                                 value={formData.stockCount}
                                 onChange={(e) => {
                                     const val = e.target.value;
+                                    // Boş değer kontrolü (sıfıra zorlamayı engelle)
+                                    if (val === '') {
+                                        setFormData({ ...formData, stockCount: '' });
+                                        return;
+                                    }
+
                                     // Sadece tam sayı değerleri kabul et
-                                    const intVal = parseInt(val) || 0;
-                                    setFormData({ ...formData, stockCount: intVal });
+                                    const intVal = parseInt(val);
+                                    if (!isNaN(intVal)) {
+                                        setFormData({ ...formData, stockCount: intVal });
+                                    }
                                 }}
                                 onKeyDown={(e) => {
                                     // Nokta ve virgül girişini engelle
