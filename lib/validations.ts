@@ -41,15 +41,15 @@ export const createInventoryItemSchema = z.object({
     month: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     week: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     date: z.string().optional(),
-    company: z.string().optional(),
-    waybillNo: z.string().min(1, "İrsaliye numarası gerekli"),
-    materialReference: z.string().min(1, "Malzeme referansı gerekli"),
+    company: z.string().trim().optional(),
+    waybillNo: z.string().trim().min(1, "İrsaliye numarası gerekli"),
+    materialReference: z.string().trim().toUpperCase().min(1, "Malzeme referansı gerekli"),
     stockCount: z.union([z.string(), z.number()])
         .transform(v => Number(v))
         .refine(v => Number.isInteger(v), { message: "Stok adedi tam sayı olmalıdır" })
         .refine(v => v > 0, { message: "Stok adedi 0'dan büyük olmalıdır" }),
     lastAction: z.enum(['Giriş', 'Çıkış']).default('Giriş'),
-    note: z.string().optional()
+    note: z.string().trim().optional()
 });
 
 // ==================== PROFILE SCHEMAS ====================
