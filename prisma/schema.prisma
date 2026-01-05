@@ -27,7 +27,7 @@ model InventoryItem {
   month             Int
   week              Int
   date              DateTime
-  company           String
+  company           String?
   waybillNo         String
   materialReference String
   stockCount        Int
@@ -38,6 +38,12 @@ model InventoryItem {
   
   // Optional: Relation to user who performed the last action
   lastModifiedBy    String? 
+
+  @@index([materialReference])
+  @@index([company])
+  @@index([waybillNo])
+  @@index([date])
+  @@index([createdAt])
 }
 
 model RolePermission {

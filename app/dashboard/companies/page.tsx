@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import EditUserModal from './edit-user-modal';
 
 interface User {
     id: string;
@@ -32,6 +33,10 @@ export default function UsersPage() {
     const [loading, setLoading] = useState(true);
     const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'USER' });
     const [showRolePanel, setShowRolePanel] = useState(false);
+
+    // Modal State
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Dynamic permissions state
     const [permissionsData, setPermissionsData] = useState<PermissionsData | null>(null);
@@ -145,6 +150,13 @@ export default function UsersPage() {
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
+            <EditUserModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={fetchUsers}
+                user={editingUser}
+            />
+
             <div>
                 <h2 className="text-2xl font-bold text-foreground">Kullanıcı Yönetimi</h2>
                 <p className="text-muted-foreground">Sisteme erişimi olan kullanıcıları görüntüleyin ve yönetin.</p>
@@ -350,22 +362,8 @@ export default function UsersPage() {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => {
-                                                            const newName = prompt("Yeni Ad Soyad:", user.name);
-                                                            if (newName === null) return;
-
-                                                            const newPass = prompt("Yeni Şifre (Değiştirmek istemiyorsanız boş bırakın):");
-
-                                                            const updates: Record<string, string> = { id: user.id, name: newName };
-                                                            if (newPass) updates.password = newPass;
-
-                                                            fetch('/api/users', {
-                                                                method: 'PUT',
-                                                                headers: { 'Content-Type': 'application/json' },
-                                                                body: JSON.stringify(updates)
-                                                            }).then(res => {
-                                                                if (res.ok) fetchUsers();
-                                                                else alert("Güncelleme başarısız (Yetkiniz yok veya hata)");
-                                                            });
+                                                            setEditingUser(user);
+                                                            setIsEditModalOpen(true);
                                                         }}
                                                         className="p-2 text-muted-foreground hover:text-blue-500 transition-colors"
                                                         title="Düzenle / Şifre Sıfırla"

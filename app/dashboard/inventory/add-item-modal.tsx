@@ -7,16 +7,17 @@ interface AddItemModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    mode: 'Giriş' | 'Çıkış';
 }
 
-export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) {
+export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddItemModalProps) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         company: '',
         waybillNo: '',
         materialReference: '',
         stockCount: 0,
-        lastAction: 'Giriş',
+        lastAction: mode,
         note: ''
     });
 
@@ -24,6 +25,18 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Manual validation for strictness
+        if (!formData.materialReference || !formData.waybillNo || formData.stockCount <= 0) {
+            alert("Lütfen zorunlu alanları doldurunuz (Referans, İrsaliye, Stok)");
+            return;
+        }
+
+        if (mode === 'Giriş' && !formData.company) {
+            alert("Lütfen firma adını giriniz");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -36,7 +49,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
             if (res.ok) {
                 onSuccess();
                 onClose();
-                // Reset form or keep common values? Resetting for now.
+                // Reset form
                 setFormData({ ...formData, waybillNo: '', materialReference: '', stockCount: 0, note: '' });
             } else {
                 alert('Hata oluştu.');
@@ -49,32 +62,38 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in duration-200">
                 <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-foreground">Yeni Stok Hareketi Ekle</h2>
+                    <h2 className="text-xl font-bold text-foreground">
+                        {mode === 'Giriş' ? 'Yeni Giriş Ekle' : 'Yeni Çıkış Ekle'}
+                    </h2>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Date fields removed as per requirement - backend handles Istanbul time */}
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {mode === 'Giriş' && (
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-muted-foreground">
+                                    Firma <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required={mode === 'Giriş'}
+                                    placeholder="Örn: ABC Otomotiv"
+                                    value={formData.company}
+                                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                                />
+                            </div>
+                        )}
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Firma</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Örn: ABC Otomotiv"
-                                value={formData.company}
-                                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">İrsaliye No</label>
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">
+                                İrsaliye No <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="text"
                                 required
@@ -86,9 +105,11 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Malzeme Referans</label>
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">
+                                Malzeme Referans <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="text"
                                 required
@@ -99,29 +120,23 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Stok Adedi</label>
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">
+                                Stok Adedi <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="number"
+                                min="1"
                                 required
                                 value={formData.stockCount}
-                                onChange={(e) => setFormData({ ...formData, stockCount: parseInt(e.target.value) })}
+                                onChange={(e) => setFormData({ ...formData, stockCount: parseInt(e.target.value) || 0 })}
                                 className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
                             />
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Son İşlem</label>
-                            <select
-                                value={formData.lastAction}
-                                onChange={(e) => setFormData({ ...formData, lastAction: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                            >
-                                <option value="Giriş">Giriş</option>
-                                <option value="Çıkış">Çıkış</option>
-                            </select>
-                        </div>
+                    <div className="grid grid-cols-1 gap-4">
+                        {/* Last Action is hidden as it is determined by mode */}
+                        <input type="hidden" value={mode} />
                         <div>
                             <label className="mb-1 block text-sm font-medium text-muted-foreground">Not</label>
                             <input
@@ -138,14 +153,14 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg px-4 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="rounded-lg px-4 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                         >
                             İptal
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                            className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
                         >
                             {loading ? 'Kaydediliyor...' : 'Kaydet'}
                         </button>

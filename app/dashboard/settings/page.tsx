@@ -78,38 +78,74 @@ export default function SettingsPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Profile Image Selection */}
+                {/* Standard Avatars */}
                 <div className="rounded-xl border border-border bg-card p-6 space-y-6 text-foreground">
                     <h3 className="text-lg font-medium flex items-center gap-2">
                         <User className="h-5 w-5 text-pink-500" />
-                        Profil Resmi
+                        Profil Resmi Seçimi
                     </h3>
 
-                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-4">
-                        {avatarSeeds.map((seed) => {
-                            const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default`;
-                            const isSelected = formData.image === `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default`;
-                            return (
-                                <button
-                                    key={seed}
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, image: `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default` })}
-                                    className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-500 scale-110 ring-2 ring-blue-500/50' : 'border-input hover:border-gray-500 hover:scale-105'
-                                        }`}
-                                >
-                                    <img
-                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default`}
-                                        alt={seed}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {isSelected && (
-                                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                            <CheckCircle2 className="h-6 w-6 text-white drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
+                    <div className="space-y-4">
+                        <p className="text-sm font-medium text-muted-foreground">İnsan Karakterler</p>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+                            {avatarSeeds.map((seed) => {
+                                const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default`;
+                                const isSelected = formData.image === avatarUrl;
+                                return (
+                                    <button
+                                        key={seed}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, image: avatarUrl })}
+                                        className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-500 scale-110 ring-2 ring-blue-500/50' : 'border-input hover:border-gray-500 hover:scale-105'
+                                            }`}
+                                    >
+                                        <img
+                                            src={avatarUrl}
+                                            alt={seed}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        {isSelected && (
+                                            <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                                <CheckCircle2 className="h-6 w-6 text-white drop-shadow-md" />
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-border">
+                        <p className="text-sm font-medium text-muted-foreground">Çizgi & Eğlenceli Karakterler</p>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+                            {['Bear', 'Rabbit', 'Cat', 'Dog', 'Lion', 'Panda', 'Robot1', 'Robot2', 'Ghost', 'Alien'].map((seed) => {
+                                const styles = ['fun-emoji', 'bottts', 'adventurer'];
+                                const style = seed.startsWith('Robot') ? 'bottts' : (['Ghost', 'Bear'].includes(seed) ? 'fun-emoji' : 'adventurer');
+                                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+                                const isSelected = formData.image === avatarUrl;
+
+                                return (
+                                    <button
+                                        key={seed}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, image: avatarUrl })}
+                                        className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-500 scale-110 ring-2 ring-blue-500/50' : 'border-input hover:border-gray-500 hover:scale-105'
+                                            }`}
+                                    >
+                                        <img
+                                            src={avatarUrl}
+                                            alt={seed}
+                                            className="w-full h-full object-cover bg-slate-100"
+                                        />
+                                        {isSelected && (
+                                            <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                                <CheckCircle2 className="h-6 w-6 text-white drop-shadow-md" />
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 

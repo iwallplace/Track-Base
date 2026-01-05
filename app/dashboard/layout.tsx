@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Users, Settings, LogOut, Menu, BarChart3, Building2 } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { ModeToggle } from '@/components/theme-toggle';
 import { NotificationsPopover } from '@/components/notifications-popover';
@@ -8,22 +8,8 @@ import { PatronChat } from '@/components/ai/patron-chat';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useState } from 'react';
-
-const navigation = [
-    { name: 'Dashboard', href: '/dashboard/reports', icon: LayoutDashboard },
-    { name: 'Malzeme Stok Takibi', href: '/dashboard/inventory', icon: Package },
-    { name: 'Raporlar', href: '/dashboard/reports', icon: BarChart3 },
-    { name: 'Firmalar', href: '/dashboard/companies', icon: Building2 },
-    { name: 'Ayarlar', href: '/dashboard/settings', icon: Settings },
-];
-
-const getPageTitle = (pathname: string) => {
-    if (pathname.includes('/inventory')) return 'Malzeme Stok Takibi';
-    if (pathname.includes('/companies')) return 'Firmalar';
-    if (pathname.includes('/settings')) return 'Ayarlar';
-    if (pathname.includes('/reports')) return 'Raporlar';
-    return 'Dashboard';
-};
+import { useLanguage } from '@/components/language-provider';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 export default function DashboardLayoutContent({
     children,
@@ -33,6 +19,31 @@ export default function DashboardLayoutContent({
     const pathname = usePathname();
     const { data: session } = useSession();
     const [collapsed, setCollapsed] = useState(false);
+    const { t } = useLanguage();
+
+    const navigation = [
+        { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+        { name: t('inventory'), href: '/dashboard/inventory', icon: Package },
+        { name: t('users'), href: '/dashboard/companies', icon: Users },
+        { name: t('settings'), href: '/dashboard/settings', icon: Settings },
+    ];
+
+    const getPageTitle = (pathname: string) => {
+        if (pathname === '/dashboard') return t('dashboard');
+        if (pathname.includes('/inventory')) return t('inventory_title');
+        if (pathname.includes('/companies')) return t('users');
+        if (pathname.includes('/settings')) return t('settings');
+        return t('dashboard');
+    };
+
+    const getUserRoleLabel = (role: string | undefined) => {
+        if (!role) return t('role_unknown');
+        if (role === 'ADMIN') return t('role_admin');
+        if (role === 'USER') return t('role_user');
+        if (role === 'IME') return t('role_ime');
+        if (role === 'KALITE') return t('role_quality');
+        return role;
+    };
 
     return (
         <div className="min-h-screen bg-background text-foreground flex">
@@ -58,7 +69,7 @@ export default function DashboardLayoutContent({
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                         return (
                             <Link
-                                key={item.name}
+                                key={item.href}
                                 href={item.href}
                                 className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${isActive
                                     ? 'bg-primary/10 text-primary'
@@ -88,13 +99,9 @@ export default function DashboardLayoutContent({
                         </div>
                         {!collapsed && (
                             <div className="ml-3 overflow-hidden">
-                                <p className="truncate text-sm font-medium text-foreground">{session?.user?.name || 'Kullanıcı'}</p>
+                                <p className="truncate text-sm font-medium text-foreground">{session?.user?.name || t('role_unknown')}</p>
                                 <p className="truncate text-xs text-muted-foreground">
-                                    {session?.user?.role === 'ADMIN' ? 'Project Owner' :
-                                        session?.user?.role === 'USER' ? 'İnci Personeli' :
-                                            session?.user?.role === 'IME' ? 'IME' :
-                                                session?.user?.role === 'KALITE' ? 'Kalite' :
-                                                    'Kullanıcı'}
+                                    {getUserRoleLabel(session?.user?.role)}
                                 </p>
                             </div>
                         )}
@@ -117,9 +124,9 @@ export default function DashboardLayoutContent({
                     <div className="flex items-center gap-3 text-muted-foreground">
                         <LayoutDashboard className="h-5 w-5" />
                         <span className="font-medium text-foreground capitalize">{getPageTitle(pathname)}</span>
-                        {/* Breadcrumb or Title placeholder */}
                     </div>
                     <div className="flex items-center gap-4">
+                        <LanguageSwitcher />
                         <ModeToggle />
                         <NotificationsPopover />
                         <Link href="/dashboard/settings" className="text-muted-foreground hover:text-foreground">

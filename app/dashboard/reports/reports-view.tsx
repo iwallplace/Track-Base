@@ -184,12 +184,12 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
 
             {/* AI Summary Section */}
             {summary && (
-                <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-6">
+                <div className="rounded-xl border border-border bg-muted/30 p-6">
                     <div className="flex items-center gap-3 mb-4">
-                        <Bot className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                        <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">Yönetici Özeti (AI Analizi)</h3>
+                        <Bot className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">Yönetici Özeti (AI Analizi)</h3>
                     </div>
-                    <div className="prose prose-sm max-w-none text-purple-800 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                    <div className="text-sm text-foreground whitespace-pre-line leading-relaxed font-medium">
                         {summary}
                     </div>
                 </div>

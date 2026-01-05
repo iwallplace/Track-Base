@@ -1,15 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Download, Plus, Search, Calendar, Filter, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
+import DateRangePicker from '@/components/date-range-picker';
+import { useLanguage } from '@/components/language-provider';
 
 interface InventoryItem {
-    id: string;
+    id: string; // Latest Item ID
     year: number;
     month: number;
     week: number;
@@ -17,29 +17,74 @@ interface InventoryItem {
     company: string;
     waybillNo: string;
     materialReference: string;
-    stockCount: number;
+    stockCount: number; // Balance
     lastAction: string;
     note: string;
 }
 
 export default function DashboardPage() {
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<InventoryItem[]>([]);
+
+    // Filters & Pagination State
     const [searchTerm, setSearchTerm] = useState("");
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [pageSize, setPageSize] = useState(20);
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'Giriş' | 'Çıkış'>('ALL');
+    const [dateRange, setDateRange] = useState<{ startDate: string, endDate: string } | null>(null);
+    const [pageSize, setPageSize] = useState(50);
     const [currentPage, setCurrentPage] = useState(1);
+
+    // Data Stats
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    // UI State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'Giriş' | 'Çıkış'>('Giriş');
+    const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
     const router = useRouter();
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setStatusDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const fetchItems = async () => {
         try {
             setLoading(true);
-            const res = await fetch('/api/inventory');
+            const params = new URLSearchParams({
+                view: 'summary', // Force summary view
+                page: currentPage.toString(),
+                limit: pageSize.toString(),
+                search: searchTerm,
+                status: statusFilter !== 'ALL' ? statusFilter : '',
+            });
+
+            if (dateRange) {
+                params.append('startDate', dateRange.startDate);
+                params.append('endDate', dateRange.endDate);
+            }
+
+            const res = await fetch(`/api/inventory?${params}`);
             if (res.ok) {
                 const response = await res.json();
-                // Handle new standardized API response format
                 const data = response.data || response;
-                setItems(Array.isArray(data) ? data : []);
+
+                if (data.items) {
+                    setItems(data.items);
+                    setTotalItems(data.pagination.total);
+                    setTotalPages(data.pagination.totalPages);
+                } else {
+                    setItems(Array.isArray(data) ? data : []);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch inventory", error);
@@ -50,19 +95,66 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchItems();
-    }, []);
+    }, [currentPage, pageSize, searchTerm, statusFilter, dateRange]);
 
-    // Reset to page 1 when search or pageSize changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, pageSize]);
+    const handleExport = async () => {
+        try {
+            const params = new URLSearchParams({
+                page: '1',
+                limit: '-1',
+                search: searchTerm,
+                status: statusFilter !== 'ALL' ? statusFilter : '',
+            });
+
+            if (dateRange) {
+                params.append('startDate', dateRange.startDate);
+                params.append('endDate', dateRange.endDate);
+            }
+
+            const res = await fetch(`/api/inventory?${params}`);
+            if (!res.ok) throw new Error('Export failed');
+
+            const response = await res.json();
+            const data = response.data?.items || (response.data && Array.isArray(response.data) ? response.data : []) || response.items || [];
+
+            if (!data.length) {
+                alert(t('no_records'));
+                return;
+            }
+
+            // Convert to CSV
+            const headers = [t('col_date'), t('col_company'), t('col_waybill'), t('col_reference'), t('col_last_action'), t('col_stock'), t('col_note')];
+            const csvContent = [
+                headers.join(','),
+                ...data.map((item: InventoryItem) => [
+                    new Date(item.date).toLocaleDateString(),
+                    `"${item.company}"`,
+                    `"${item.waybillNo}"`,
+                    `"${item.materialReference}"`,
+                    item.lastAction,
+                    item.stockCount,
+                    `"${item.note}"`
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `inventory_full_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error(error);
+            alert(t('error'));
+        }
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Paketlendi': return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
-            case 'Beklemede': return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
-            case 'Sevk Edildi': return 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
-            case 'İade': return 'bg-red-500/10 text-red-500 border border-red-500/20';
+            case 'Giriş': return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+            case 'Çıkış': return 'bg-red-500/10 text-red-500 border border-red-500/20';
             default: return 'bg-gray-500/10 text-gray-500 border border-gray-500/20';
         }
     };
@@ -77,18 +169,11 @@ export default function DashboardPage() {
         return colors[Math.abs(hash) % colors.length];
     };
 
-    const filteredItems = items.filter(item =>
-        Object.values(item).some(val =>
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-    );
-
-    // Pagination calculations
-    const totalItems = filteredItems.length;
-    const totalPages = pageSize === -1 ? 1 : Math.ceil(totalItems / pageSize);
-    const startIndex = pageSize === -1 ? 0 : (currentPage - 1) * pageSize;
-    const endIndex = pageSize === -1 ? totalItems : startIndex + pageSize;
-    const visibleItems = filteredItems.slice(startIndex, endIndex);
+    const getStatusLabel = (status: string) => {
+        if (status === 'Giriş') return t('status_entry');
+        if (status === 'Çıkış') return t('status_exit');
+        return status;
+    };
 
     return (
         <div className="space-y-6">
@@ -96,25 +181,42 @@ export default function DashboardPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={fetchItems}
+                mode={modalMode}
             />
 
             {/* Header Section */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground">Malzeme Stok Takibi</h2>
-                    <p className="text-muted-foreground">Yan sanayi paketleme süreçlerini ve stok hareketlerini detaylı izleyin.</p>
+                    <h2 className="text-2xl font-bold text-foreground">{t('inventory_title')}</h2>
+                    <p className="text-muted-foreground">{t('inventory_desc')}</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors">
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                    >
                         <Download className="h-4 w-4" />
-                        Dışa Aktar
+                        {t('export')}
                     </button>
                     <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                        onClick={() => {
+                            setModalMode('Giriş');
+                            setIsModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
                     >
                         <Plus className="h-4 w-4" />
-                        Yeni Görev
+                        {t('add_entry')}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setModalMode('Çıkış');
+                            setIsModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+                    >
+                        <Plus className="h-4 w-4" />
+                        {t('add_exit')}
                     </button>
                 </div>
             </div>
@@ -128,31 +230,67 @@ export default function DashboardPage() {
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Firma, İrsaliye No veya Referans ile ara..."
+                            placeholder={t('search')}
                             className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
-                    <button className="flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground">
-                        <Calendar className="h-4 w-4" />
-                        Bu Hafta
-                    </button>
+                    <DateRangePicker
+                        onChange={(range) => setDateRange(range)}
+                        initialRange={undefined}
+                    />
 
-                    <button className="flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground">
-                        <Filter className="h-4 w-4" />
-                        Tüm Firmalar
-                    </button>
+                    {/* Status Dropdown */}
+                    <div className="relative" ref={dropdownRef}>
+                        <button
+                            onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                            className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${statusFilter !== 'ALL'
+                                ? 'bg-purple-500/10 border-purple-500/50 text-purple-600'
+                                : 'border-input bg-background text-foreground hover:bg-accent'
+                                }`}
+                        >
+                            <Filter className="h-4 w-4" />
+                            {statusFilter === 'ALL' ? t('filter_status') : getStatusLabel(statusFilter)}
+                            <ChevronDown className={`h-3 w-3 ml-1 opacity-50 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
 
-                    <button className="flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground">
-                        <Filter className="h-4 w-4" />
-                        İşlem Durumu
-                    </button>
+                        {statusDropdownOpen && (
+                            <div className="absolute top-full right-0 mt-2 w-40 rounded-lg border border-border bg-card shadow-lg z-20 py-1 overflow-hidden">
+                                <button
+                                    onClick={() => { setStatusFilter('ALL'); setStatusDropdownOpen(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted text-foreground flex items-center justify-between group"
+                                >
+                                    {t('status_all')}
+                                    {statusFilter === 'ALL' && <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+                                </button>
+                                <button
+                                    onClick={() => { setStatusFilter('Giriş'); setStatusDropdownOpen(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted text-emerald-600 flex items-center justify-between group"
+                                >
+                                    {t('status_entry')}
+                                    {statusFilter === 'Giriş' && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                                </button>
+                                <button
+                                    onClick={() => { setStatusFilter('Çıkış'); setStatusDropdownOpen(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted text-red-600 flex items-center justify-between group"
+                                >
+                                    {t('status_exit')}
+                                    {statusFilter === 'Çıkış' && <div className="h-1.5 w-1.5 rounded-full bg-red-500" />}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <button
-                        onClick={fetchItems}
-                        className="rounded-lg border border-input bg-background p-2.5 text-muted-foreground hover:text-foreground hover:bg-accent"
+                        onClick={() => {
+                            setSearchTerm('');
+                            setStatusFilter('ALL');
+                            setDateRange(null);
+                        }}
+                        className="flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
                     >
-                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className="h-4 w-4" />
+                        {t('cancel')}
                     </button>
                 </div>
             </div>
@@ -163,57 +301,61 @@ export default function DashboardPage() {
                     <table className="w-full text-left text-sm">
                         <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
                             <tr>
-                                <th className="px-6 py-4 font-medium">YIL / AY</th>
-                                <th className="px-6 py-4 font-medium">HAFTA</th>
-                                <th className="px-6 py-4 font-medium">TARİH</th>
-                                <th className="px-6 py-4 font-medium">FİRMA</th>
-                                <th className="px-6 py-4 font-medium">İRSALİYE NO</th>
-                                <th className="px-6 py-4 font-medium">MALZEME REF</th>
-                                <th className="px-6 py-4 font-medium text-right">STOK</th>
-                                <th className="px-6 py-4 font-medium">SON İŞLEM</th>
-                                <th className="px-6 py-4 font-medium">NOT</th>
+                                <th className="px-6 py-4 font-medium">{t('col_year_month')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_week')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_date')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_company')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_waybill')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_reference')}</th>
+                                <th className="px-6 py-4 font-medium text-right text-blue-600">{t('col_stock')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_last_action')}</th>
+                                <th className="px-6 py-4 font-medium">{t('col_note')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {visibleItems.length === 0 && !loading && (
+                            {items.length === 0 && !loading && (
                                 <tr>
                                     <td colSpan={9} className="px-6 py-8 text-center text-muted-foreground">
-                                        Kayıt bulunamadı. "Yeni Görev" butonu ile ekleme yapabilirsiniz.
+                                        {t('no_records')}
                                     </td>
                                 </tr>
                             )}
-                            {visibleItems.map((item) => (
+                            {items.map((item) => (
                                 <motion.tr
-                                    key={item.id}
+                                    key={item.materialReference}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    onClick={() => router.push(`/dashboard/inventory/${item.materialReference}`)}
+                                    onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}`)}
                                     className="hover:bg-muted/50 transition-colors cursor-pointer group"
                                 >
                                     <td className="px-6 py-4">
                                         <div className="font-medium text-foreground">{item.year}</div>
-                                        <div className="text-muted-foreground text-xs">/ {item.month < 10 ? `0${item.month}` : item.month}. Ay</div>
+                                        <div className="text-muted-foreground text-xs">/ {item.month}. {t('month')}</div>
                                     </td>
-                                    <td className="px-6 py-4 text-muted-foreground">{item.week}. Hafta</td>
                                     <td className="px-6 py-4 text-muted-foreground">
+                                        {item.week}. {t('week')}
+                                    </td>
+                                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                                         {new Date(item.date).toLocaleDateString("tr-TR")}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white ${getCompanyColor(item.company)}`}>
+                                            <div className={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white shrink-0 ${getCompanyColor(item.company)}`}>
                                                 {getCompanyInitial(item.company)}
                                             </div>
-                                            <span className="text-foreground">{item.company}</span>
+                                            <span className="text-foreground whitespace-nowrap">{item.company}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 font-mono text-muted-foreground text-xs">{item.waybillNo}</td>
-                                    <td className="px-6 py-4 font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                                    <td className="px-6 py-4 font-mono text-muted-foreground text-xs whitespace-nowrap">{item.waybillNo}</td>
+                                    <td className="px-6 py-4 font-mono font-medium text-foreground text-sm group-hover:text-blue-600 transition-colors whitespace-nowrap">
                                         {item.materialReference}
                                     </td>
-                                    <td className="px-6 py-4 text-right font-bold text-foreground">{item.stockCount.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-right font-bold text-lg text-blue-600">
+                                        {item.stockCount.toLocaleString()}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(item.lastAction)}`}>
-                                            {item.lastAction}
+                                            {getStatusLabel(item.lastAction)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">{item.note}</td>
@@ -223,19 +365,19 @@ export default function DashboardPage() {
                     </table>
                 </div>
 
-                {/* Pagination with Page Size Selector */}
+                {/* Pagination */}
                 <div className="border-t border-border px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="text-sm text-muted-foreground">
-                            Toplam <span className="font-medium text-foreground">{totalItems}</span> kayıt
+                            {t('total_records')} <span className="font-medium text-foreground">{totalItems}</span>
                             {pageSize !== -1 && (
                                 <span className="ml-2">
-                                    ({startIndex + 1}-{Math.min(endIndex, totalItems)} arası gösteriliyor)
+                                    {t('page')} {currentPage}
                                 </span>
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Sayfa başına:</span>
+                            <span className="text-sm text-muted-foreground">{t('page_size')}:</span>
                             <select
                                 value={pageSize}
                                 onChange={(e) => setPageSize(Number(e.target.value))}
@@ -244,34 +386,12 @@ export default function DashboardPage() {
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
-                                <option value={-1}>Tümü</option>
+                                <option value={-1}>{t('status_all')}</option>
                             </select>
                         </div>
                     </div>
-                    {pageSize !== -1 && totalPages > 1 && (
-                        <div className="flex gap-2 items-center">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="rounded-lg border border-input bg-background p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <span className="text-sm text-muted-foreground">
-                                Sayfa <span className="font-medium text-foreground">{currentPage}</span> / {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="rounded-lg border border-input bg-background p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
     );
 }
-

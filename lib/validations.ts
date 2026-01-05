@@ -41,7 +41,7 @@ export const createInventoryItemSchema = z.object({
     month: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     week: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
     date: z.string().optional(),
-    company: z.string().min(1, "Firma adı gerekli"),
+    company: z.string().optional(),
     waybillNo: z.string().min(1, "İrsaliye numarası gerekli"),
     materialReference: z.string().min(1, "Malzeme referansı gerekli"),
     stockCount: z.union([z.string(), z.number()]).transform(v => Number(v)),
