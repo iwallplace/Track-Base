@@ -37,15 +37,15 @@ export const updateUserSchema = z.object({
 // ==================== INVENTORY SCHEMAS ====================
 
 export const createInventoryItemSchema = z.object({
-    year: z.union([z.string(), z.number()]).transform(v => Number(v)),
-    month: z.union([z.string(), z.number()]).transform(v => Number(v)),
-    week: z.union([z.string(), z.number()]).transform(v => Number(v)),
-    date: z.string().refine(val => !isNaN(Date.parse(val)), "Geçersiz tarih formatı"),
+    year: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
+    month: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
+    week: z.union([z.string(), z.number()]).transform(v => Number(v)).optional(),
+    date: z.string().optional(),
     company: z.string().min(1, "Firma adı gerekli"),
-    waybillNo: z.string().optional(),
+    waybillNo: z.string().min(1, "İrsaliye numarası gerekli"),
     materialReference: z.string().min(1, "Malzeme referansı gerekli"),
     stockCount: z.union([z.string(), z.number()]).transform(v => Number(v)),
-    lastAction: z.string().optional(),
+    lastAction: z.enum(['Giriş', 'Çıkış']).default('Giriş'),
     note: z.string().optional()
 });
 

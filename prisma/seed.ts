@@ -22,7 +22,7 @@ async function main() {
     // --- MOCK DATA GENERATION ---
     console.log("Generating 50 References with 10 Transactions each...");
     const companies = ["Schneider Electric", "Siemens", "ABB", "Legrand", "Eaton", "Viko", "Oymapınar", "Arçelik", "Vestel", "Tofaş"];
-    const statuses = ["Paketlendi", "Beklemede", "Sevk Edildi", "İade", "Üretim"];
+    const statuses = ["Giriş", "Çıkış"];
     const mockData = [];
 
     for (let i = 1; i <= 50; i++) {

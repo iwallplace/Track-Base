@@ -101,7 +101,7 @@ export default function DashboardPage() {
             {/* Header Section */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground">İş Takibi</h2>
+                    <h2 className="text-2xl font-bold text-foreground">Malzeme Stok Takibi</h2>
                     <p className="text-muted-foreground">Yan sanayi paketleme süreçlerini ve stok hareketlerini detaylı izleyin.</p>
                 </div>
                 <div className="flex gap-3">

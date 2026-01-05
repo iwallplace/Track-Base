@@ -1,16 +1,6 @@
 'use client';
 
-import {
-    LayoutDashboard,
-    ClipboardList,
-    Package,
-    Users,
-    BarChart3,
-    Bell,
-    Settings,
-    LogOut,
-    ChevronRight
-} from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, LogOut, Menu, BarChart3, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { ModeToggle } from '@/components/theme-toggle';
 import { NotificationsPopover } from '@/components/notifications-popover';
@@ -21,13 +11,15 @@ import { useState } from 'react';
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard/reports', icon: LayoutDashboard },
-    { name: 'İş Takibi', href: '/dashboard/inventory', icon: Package },
-    { name: 'Kullanıcılar', href: '/dashboard/companies', icon: Users },
+    { name: 'Malzeme Stok Takibi', href: '/dashboard/inventory', icon: Package },
+    { name: 'Raporlar', href: '/dashboard/reports', icon: BarChart3 },
+    { name: 'Firmalar', href: '/dashboard/companies', icon: Building2 },
+    { name: 'Ayarlar', href: '/dashboard/settings', icon: Settings },
 ];
 
 const getPageTitle = (pathname: string) => {
-    if (pathname.includes('/inventory')) return 'İş Takibi';
-    if (pathname.includes('/companies')) return 'Kullanıcılar';
+    if (pathname.includes('/inventory')) return 'Malzeme Stok Takibi';
+    if (pathname.includes('/companies')) return 'Firmalar';
     if (pathname.includes('/settings')) return 'Ayarlar';
     if (pathname.includes('/reports')) return 'Raporlar';
     return 'Dashboard';

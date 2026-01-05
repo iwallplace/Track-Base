@@ -12,15 +12,11 @@ interface AddItemModalProps {
 export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModalProps) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        year: new Date().getFullYear(),
-        month: new Date().getMonth() + 1,
-        week: 1, // keeping simple for now, ideally calculated
-        date: new Date().toISOString().split('T')[0],
         company: '',
         waybillNo: '',
         materialReference: '',
         stockCount: 0,
-        lastAction: 'Paketlendi',
+        lastAction: 'Giriş',
         note: ''
     });
 
@@ -56,59 +52,14 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-xl">
                 <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-foreground">Yeni İşlem Ekle</h2>
+                    <h2 className="text-xl font-bold text-foreground">Yeni Stok Hareketi Ekle</h2>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Tarih</label>
-                            <input
-                                type="date"
-                                required
-                                value={formData.date}
-                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                            />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-muted-foreground">Yıl</label>
-                                <input
-                                    type="number"
-                                    required
-                                    value={formData.year}
-                                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-muted-foreground">Ay</label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="1" max="12"
-                                    value={formData.month}
-                                    onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
-                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-muted-foreground">Hafta</label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="1" max="53"
-                                    value={formData.week}
-                                    onChange={(e) => setFormData({ ...formData, week: parseInt(e.target.value) })}
-                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    {/* Date fields removed as per requirement - backend handles Istanbul time */}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -167,11 +118,8 @@ export default function AddItemModal({ isOpen, onClose, onSuccess }: AddItemModa
                                 onChange={(e) => setFormData({ ...formData, lastAction: e.target.value })}
                                 className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
                             >
-                                <option value="Paketlendi">Paketlendi</option>
-                                <option value="Beklemede">Beklemede</option>
-                                <option value="Sevk Edildi">Sevk Edildi</option>
-                                <option value="İade">İade</option>
-                                <option value="Üretim">Üretim</option>
+                                <option value="Giriş">Giriş</option>
+                                <option value="Çıkış">Çıkış</option>
                             </select>
                         </div>
                         <div>

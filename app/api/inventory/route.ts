@@ -60,17 +60,45 @@ export async function POST(req: Request) {
 
         const data = validation.data;
 
+        // Calculate Date parts for Europe/Istanbul
+        const now = new Date();
+        const dateFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Europe/Istanbul',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric'
+        });
+
+        const parts = dateFormatter.formatToParts(now);
+        const year = parseInt(parts.find(p => p.type === 'year')?.value || String(now.getFullYear()));
+        const month = parseInt(parts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1));
+        const day = parseInt(parts.find(p => p.type === 'day')?.value || String(now.getDate()));
+
+        // Construct date object (noon to avoid timezone shifting issues on display if possible, or just strict date)
+        const date = new Date(year, month - 1, day);
+
+        // Simple ISO week calculation
+        const target = new Date(year, month - 1, day);
+        const dayNr = (target.getDay() + 6) % 7;
+        target.setDate(target.getDate() - dayNr + 3);
+        const firstThursday = target.valueOf();
+        target.setMonth(0, 1);
+        if (target.getDay() !== 4) {
+            target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+        }
+        const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+
         const item = await prisma.inventoryItem.create({
             data: {
-                year: data.year,
-                month: data.month,
-                week: data.week,
-                date: new Date(data.date),
+                year: year,
+                month: month,
+                week: week,
+                date: date,
                 company: data.company,
                 waybillNo: data.waybillNo || "",
                 materialReference: data.materialReference,
                 stockCount: data.stockCount,
-                lastAction: data.lastAction || "",
+                lastAction: data.lastAction || "Giriş",
                 note: data.note || "",
                 lastModifiedBy: session.user.id
             }
