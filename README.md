@@ -58,7 +58,7 @@ inventory-app/
 | **Frontend** | Next.js 15 | App Router yapısı ile modern React framework'ü |
 | **Dil** | TypeScript | Tip güvenli geliştirme |
 | **Stil** | Tailwind CSS v4 | Hızlı ve esnek UI tasarımı |
-| **Veritabanı** | SQLite | Hafif ve hızlı yerel veritabanı |
+| **Veritabanı** | PostgreSQL (Supabase) | Ölçeklenebilir ve güvenli veritabanı |
 | **ORM** | Prisma | Veritabanı yönetimi ve tip güvenli sorgular |
 | **Auth** | NextAuth.js | Güvenli kimlik doğrulama çözümü |
 | **AI** | Google Gemini | Üretken yapay zeka entegrasyonu |
@@ -82,8 +82,9 @@ inventory-app/
    `.env` dosyasını oluşturun ve aşağıdaki değerleri (kendi production ortamınıza göre) güncelleyin:
 
    ```bash
-   # Veritabanı (Yerel SQLite)
-   DATABASE_URL="file:./dev.db"
+   # Veritabanı (Supabase PostgreSQL)
+   DATABASE_URL="postgres://..."
+   POSTGRES_PRISMA_URL="postgres://..."
 
    # NextAuth Ayarları
    NEXTAUTH_SECRET="gizli-anahtariniz-buraya"
