@@ -6,7 +6,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
-import { Download, Mail, Bot, FileSpreadsheet, AlertTriangle, Package } from 'lucide-react';
+import { Download, Mail, Bot, FileSpreadsheet, AlertTriangle, Package, Server, Database, Cpu, Activity } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
@@ -16,11 +16,19 @@ interface ReportsViewProps {
         statusCounts: any[];
         monthlyActivity: any[];
         totalStock: number;
+        uniqueMaterialCount: number;
         turnoverRate: string;
         deadStockCount: number;
         lowStockCount: number;
         lowStockItems: { id: string; materialReference: string; company: string; stockCount: number }[];
         topMaterials: { reference: string; transactionCount: number; totalStock: number }[];
+        systemMetrics?: {
+            dbSize: string;
+            memoryUsage: string;
+            uptime: number;
+            platform: string;
+            rowCount: number;
+        };
     };
     period: string; // Used for export filename and display
 }
@@ -128,7 +136,8 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
         // Sheet 1: Summary
         const summaryData = [
             ['Metrik', 'Değer'],
-            ['Toplam Stok', data.totalStock],
+            ['Toplam Malzeme Ref', data.uniqueMaterialCount],
+            ['Toplam Stok Adedi', data.totalStock],
             ['Stok Devir Hızı', `%${data.turnoverRate}`],
             ['Ölü Stok', data.deadStockCount],
             ['Kritik Seviye', data.lowStockCount],
@@ -193,9 +202,9 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                 {/* KPI Cards */}
                 <div className="grid gap-4 md:grid-cols-4 mb-6">
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">Toplam Stok</div>
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{data.totalStock?.toLocaleString()}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Adet</div>
+                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">TOPLAM MALZEME</div>
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{data.uniqueMaterialCount?.toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground mt-1">Farklı Referans</div>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
                         <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">Stok Devir Hızı</div>
@@ -346,6 +355,54 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
 
             </div>
 
+            {/* System Metrics Section (Admin Only - Data Dependent) */}
+            {data.systemMetrics && (
+                <div className="rounded-xl border border-indigo-500/30 bg-card p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Activity className="h-5 w-5 text-indigo-500" />
+                        <h3 className="text-lg font-medium text-foreground">Sistem Durumu (Admin Panel)</h3>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-4">
+                        <div className="flex items-center gap-4 rounded-lg bg-indigo-500/10 p-4 border border-indigo-500/20">
+                            <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-500">
+                                <Database className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground uppercase font-bold">DB Boyutu</div>
+                                <div className="text-lg font-bold text-foreground">{data.systemMetrics.dbSize}</div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 rounded-lg bg-indigo-500/10 p-4 border border-indigo-500/20">
+                            <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-500">
+                                <Cpu className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground uppercase font-bold">RAM Kullanımı</div>
+                                <div className="text-lg font-bold text-foreground">{data.systemMetrics.memoryUsage}</div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 rounded-lg bg-indigo-500/10 p-4 border border-indigo-500/20">
+                            <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-500">
+                                <Server className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground uppercase font-bold">Platform</div>
+                                <div className="text-lg font-bold text-foreground">{data.systemMetrics.platform}</div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 rounded-lg bg-indigo-500/10 p-4 border border-indigo-500/20">
+                            <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-500">
+                                <Activity className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground uppercase font-bold">Toplam Kayıt</div>
+                                <div className="text-lg font-bold text-foreground">{data.systemMetrics.rowCount.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
 
             {/* Hidden PDF Template */}
@@ -384,8 +441,8 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                 {/* KPI Scorecard */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
                     <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '10px', color: '#1e40af', fontWeight: 'bold' }}>TOPLAM STOK</div>
-                        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1d4ed8' }}>{data.totalStock?.toLocaleString()}</div>
+                        <div style={{ fontSize: '10px', color: '#1e40af', fontWeight: 'bold' }}>TOPLAM MALZEME</div>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1d4ed8' }}>{data.uniqueMaterialCount?.toLocaleString()}</div>
                     </div>
                     <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
                         <div style={{ fontSize: '10px', color: '#065f46', fontWeight: 'bold' }}>DEVİR HIZI</div>

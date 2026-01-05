@@ -255,15 +255,60 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             .slice(0, 5);
 
 
+        // 9. System Metrics (RBAC Controlled)
+        let systemMetrics = undefined;
+
+        // Check permission
+        const hasSystemStatusPermission = await prisma.rolePermission.findUnique({
+            where: {
+                role_permission: {
+                    role: session.user.role as string,
+                    permission: 'system.status.view'
+                }
+            }
+        });
+
+        // ADMIN always sees it, or if permission is explicitly granted
+        if (session.user.role === 'ADMIN' || (hasSystemStatusPermission && hasSystemStatusPermission.granted)) {
+            try {
+                // DB Size
+                const dbSizeResult = await prisma.$queryRaw`SELECT pg_size_pretty(pg_database_size(current_database())) as size`;
+                const dbSize = Array.isArray(dbSizeResult) && dbSizeResult.length > 0 ? (dbSizeResult[0] as any).size : 'Unknown';
+
+                // Row Count
+                const rowCount = await prisma.inventoryItem.count();
+
+                // Memory (Heap Used)
+                const used = process.memoryUsage().heapUsed / 1024 / 1024;
+                const memoryUsage = `${Math.round(used)} MB`;
+
+                // Platform
+                const platform = `${process.platform} (${process.arch}) - Node ${process.version}`;
+
+                systemMetrics = {
+                    dbSize: dbSize as string,
+                    memoryUsage,
+                    uptime: Math.floor(process.uptime()),
+                    platform,
+                    rowCount
+                };
+            } catch (err) {
+                console.error("System Metrics Fetch Error:", err);
+                // Fail silently for system metrics
+            }
+        }
+
         const data = {
             statusCounts,
             monthlyActivity,
-            totalStock, // Real current balance
+            totalStock, // Real current balance (Quantity) - kept for internal logic/charts if needed
+            uniqueMaterialCount: materialMap.size, // NEW: Distinct Material Reference Count
             turnoverRate, // Real turnover based on 'Çıkış'
             deadStockCount, // Real dead stock (>90 days inactivity)
             lowStockCount, // Real critical stock (<20 balance)
             lowStockItems: lowStockList.slice(0, 5), // Top 5 critical items
-            topMaterials
+            topMaterials,
+            systemMetrics
         };
 
         console.log("ReportsPage: Data calculated successfully.");

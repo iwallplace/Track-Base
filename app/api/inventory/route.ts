@@ -80,43 +80,55 @@ export async function GET(req: Request) {
         }
 
         if (view === 'summary') {
+            // 1. Separate Status from WhereClause for initial fetch
+            // We need to find materials that match Search/Date, then check their LATEST status
+            const queryWhere = { ...whereClause };
+            delete queryWhere.lastAction; // Remove status filter from DB query
+
+            // 2. Find all distinct materials matching Search/Date
             const distinctMaterials = await prisma.inventoryItem.findMany({
-                where: whereClause,
+                where: queryWhere,
                 select: { materialReference: true },
                 distinct: ['materialReference'],
                 orderBy: { materialReference: 'asc' }
             });
 
-            const total = distinctMaterials.length;
-            const paginatedMaterials = limit
-                ? distinctMaterials.slice((page - 1) * limit, page * limit)
-                : distinctMaterials;
+            // 3. Process items to find Latest and Balance
+            const processedItems: InventorySummary[] = [];
 
-            const summaryItems: InventorySummary[] = [];
-
-            for (const mat of paginatedMaterials) {
+            for (const mat of distinctMaterials) {
                 const ref = mat.materialReference;
 
-                const [entrySum, exitSum] = await Promise.all([
-                    prisma.inventoryItem.aggregate({
-                        _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Giriş' }
-                    }),
-                    prisma.inventoryItem.aggregate({
-                        _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Çıkış' }
-                    })
-                ]);
-
-                const balance = (entrySum._sum.stockCount || 0) - (exitSum._sum.stockCount || 0);
-
+                // Find Latest Item (matching Search/Date)
                 const latestItem = await prisma.inventoryItem.findFirst({
-                    where: { materialReference: ref, ...whereClause },
+                    where: { materialReference: ref, ...queryWhere },
                     orderBy: { date: 'desc' }
                 });
 
                 if (latestItem) {
-                    summaryItems.push({
+                    // 4. Apply Status Filter here (on the LATEST item)
+                    if (status && latestItem.lastAction !== status) {
+                        continue; // Skip if latest status doesn't match filter
+                    }
+
+                    // Calculate Global Balance (Always global for accuracy)
+                    // Note: If view assumes "Balance at date", this should be adjusted.
+                    // But current UI implies "Current Stock" vs "History".
+                    // The previous code calculated global balance. Keeping it consistent.
+                    const [entrySum, exitSum] = await Promise.all([
+                        prisma.inventoryItem.aggregate({
+                            _sum: { stockCount: true },
+                            where: { materialReference: ref, lastAction: 'Giriş' }
+                        }),
+                        prisma.inventoryItem.aggregate({
+                            _sum: { stockCount: true },
+                            where: { materialReference: ref, lastAction: 'Çıkış' }
+                        })
+                    ]);
+
+                    const balance = (entrySum._sum.stockCount || 0) - (exitSum._sum.stockCount || 0);
+
+                    processedItems.push({
                         id: latestItem.id,
                         materialReference: ref,
                         company: latestItem.company || '',
@@ -133,14 +145,21 @@ export async function GET(req: Request) {
                 }
             }
 
-            const userIds = [...new Set(summaryItems.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
+            // 5. Paginate In-Memory
+            const total = processedItems.length;
+            const paginatedItems = limit
+                ? processedItems.slice((page - 1) * limit, page * limit)
+                : processedItems;
+
+            // 6. Map Users
+            const userIds = [...new Set(paginatedItems.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
             const users = await prisma.user.findMany({
                 where: { id: { in: userIds } },
                 select: { id: true, name: true }
             });
             const userMap = new Map(users.map(u => [u.id, u.name]));
 
-            const finalItems = summaryItems.map(item => ({
+            const finalItems = paginatedItems.map(item => ({
                 ...item,
                 modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem'
             }));

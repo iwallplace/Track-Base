@@ -20,7 +20,8 @@ const PERMISSION_LABELS: Record<string, string> = {
     'users.role.change': 'Kullanıcı rolü değiştirme',
     'settings.edit': 'Sistem ayarlarını düzenleme',
     'ai.use': 'AI asistanını kullanma',
-    'reports.view': 'Raporları görüntüleme'
+    'reports.view': 'Raporları görüntüleme',
+    'system.status.view': 'Sistem durumunu görüntüleme'
 };
 
 const ROLE_LABELS: Record<string, string> = {
