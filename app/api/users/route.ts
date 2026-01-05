@@ -37,7 +37,7 @@ export async function GET() {
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
-    if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
+    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
         return unauthorizedResponse();
     }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
 
-    if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
+    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
         return unauthorizedResponse();
     }
 
@@ -113,7 +113,7 @@ export async function DELETE(req: Request) {
 export async function PUT(req: Request) {
     const session = await getServerSession(authOptions);
 
-    if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
+    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
         return unauthorizedResponse();
     }
 

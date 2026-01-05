@@ -53,7 +53,7 @@ export async function GET() {
         }));
 
         // 2. User Activity Notifications (Only for ADMIN, IME, KALITE)
-        if (['ADMIN', 'IME', 'KALITE'].includes(session.user.role)) {
+        if (session.user.role && ['ADMIN', 'IME', 'KALITE'].includes(session.user.role)) {
             const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const newUsers = await prisma.user.findMany({
                 where: {
