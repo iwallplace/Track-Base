@@ -27,7 +27,7 @@ export const createUserSchema = z.object({
 });
 
 export const updateUserSchema = z.object({
-    id: z.string().uuid("Geçersiz ID formatı"),
+    id: z.string().min(1, "ID gerekli"),
     name: z.string().min(2).optional(),
     username: z.string().min(3).optional(),
     password: z.string().min(6).optional(),
