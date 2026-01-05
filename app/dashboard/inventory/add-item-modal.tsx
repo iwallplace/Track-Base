@@ -124,7 +124,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                                     placeholder="Örn: ABC Otomotiv"
                                     value={formData.company}
                                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
                                 />
                             </div>
                         )}
@@ -138,7 +138,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                                 placeholder="IRS-2024-..."
                                 value={formData.waybillNo}
                                 onChange={(e) => setFormData({ ...formData, waybillNo: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
                             />
                         </div>
                     </div>
@@ -154,7 +154,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                                 placeholder="REF-..."
                                 value={formData.materialReference}
                                 onChange={(e) => setFormData({ ...formData, materialReference: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
                             />
                         </div>
                         <div>
@@ -203,7 +203,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                                 placeholder="Varsa notunuz..."
                                 value={formData.note}
                                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
                             />
                         </div>
                     </div>
