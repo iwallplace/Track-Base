@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Save, Lock, User, Key, Shield } from 'lucide-react';
+import { useToast } from '@/components/toast';
 
 interface EditUserModalProps {
     isOpen: boolean;
@@ -16,6 +17,7 @@ interface EditUserModalProps {
 }
 
 export default function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModalProps) {
+    const { showToast } = useToast();
     const [formData, setFormData] = useState({
         name: '',
         username: '',
@@ -61,13 +63,14 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
             if (res.ok) {
                 onSuccess();
                 onClose();
+                showToast('Kullanıcı güncellendi', 'success');
             } else {
                 const data = await res.json();
-                alert(data.error || 'Güncelleme başarısız');
+                showToast(data.error || 'Güncelleme başarısız', 'error');
             }
         } catch (error) {
             console.error('Update failed', error);
-            alert('Bir hata oluştu');
+            showToast('Bir hata oluştu', 'error');
         } finally {
             setLoading(false);
         }

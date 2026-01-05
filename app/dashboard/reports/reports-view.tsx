@@ -10,6 +10,7 @@ import { Download, Mail, Bot, FileSpreadsheet, AlertTriangle, Package, Server, D
 import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
+import { useToast } from '@/components/toast';
 
 interface ReportsViewProps {
     data: {
@@ -37,6 +38,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function ReportsView({ data, period }: ReportsViewProps) {
     const router = useRouter();
+    const { showToast } = useToast();
     const reportRef = useRef<HTMLDivElement>(null);
 
     const [summary, setSummary] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
     const handleDownloadPDF = async () => {
         const pdfTemplate = document.getElementById('pdf-report-template');
         if (!pdfTemplate) {
-            alert("PDF şablonu bulunamadı.");
+            showToast("PDF şablonu bulunamadı.", "error");
             return;
         }
 
@@ -95,11 +97,12 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
             pdf.save(`KPI-Rapor-${period.replace(/\s/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
 
             if (btn) btn.innerHTML = '<Download class="h-4 w-4" /> PDF İndir';
+            showToast('PDF başarıyla indirildi', 'success');
         } catch (error) {
             console.error(error);
             const pdfTemplate = document.getElementById('pdf-report-template');
             if (pdfTemplate) pdfTemplate.style.left = '-9999px';
-            alert("PDF oluşturulamadı: " + (error as any).message);
+            showToast("PDF oluşturulamadı: " + (error as any).message, 'error');
             if (btn) btn.innerHTML = '<Download class="h-4 w-4" /> PDF İndir';
         }
     };

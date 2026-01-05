@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
+import { useToast } from '@/components/toast';
 
 interface User {
     id: string;
@@ -29,6 +30,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function UsersPage() {
     const { data: session } = useSession();
+    const { showToast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'USER' });
@@ -66,6 +68,7 @@ export default function UsersPage() {
             }
         } catch (error) {
             console.error('Failed to fetch permissions', error);
+            showToast('Yetkiler yüklenirken hata oluştu', 'error');
         } finally {
             setPermLoading(false);
         }
@@ -80,23 +83,46 @@ export default function UsersPage() {
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        const res = await fetch('/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newUser)
-        });
-        if (res.ok) {
-            setNewUser({ name: '', username: '', password: '', role: 'USER' });
-            fetchUsers();
-        } else {
-            alert("Kullanıcı eklenirken hata oluştu");
+        try {
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser)
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setNewUser({ name: '', username: '', password: '', role: 'USER' });
+                fetchUsers();
+                showToast('Kullanıcı başarıyla eklendi', 'success');
+            } else {
+                showToast(data.error || "Kullanıcı eklenirken hata oluştu", 'error');
+            }
+        } catch (error) {
+            showToast('Sunucu hatası', 'error');
         }
     };
 
     const handleDeleteUser = async (id: string) => {
+        // We can create a confirmation modal component later, effectively replacing confirm() too if needed.
+        // For now user asked for alert replacements. confirm() is native but blocking.
+        // I will keep confirm() as it is standard behavior unless explicitly asked to replace confirms with custom modals.
+        // The user said "remove all alerts", not "remove all dialogs".
         if (!confirm("Emin misiniz?")) return;
-        const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
-        if (res.ok) fetchUsers();
+
+        try {
+            const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchUsers();
+                showToast('Kullanıcı silindi', 'success');
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Silme işlemi başarısız', 'error');
+            }
+        } catch (error) {
+            showToast('Silme işlemi sırasında hata', 'error');
+        }
     };
 
     const handleTogglePermission = async (role: string, permission: string, currentValue: boolean) => {
@@ -125,13 +151,14 @@ export default function UsersPage() {
                         }
                     };
                 });
+                showToast('Yetki güncellendi', 'success');
             } else {
                 const data = await res.json();
-                alert(data.error || 'Güncelleme başarısız');
+                showToast(data.error || 'Güncelleme başarısız', 'error');
             }
         } catch (error) {
             console.error('Permission update error:', error);
-            alert('Bağlantı hatası');
+            showToast('Bağlantı hatası', 'error');
         } finally {
             setUpdatingPerm(null);
         }
