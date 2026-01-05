@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
 import DateRangePicker from '@/components/date-range-picker';
 import { useLanguage } from '@/components/language-provider';
+import { useToast } from '@/components/toast';
 
 interface InventoryItem {
     id: string; // Latest Item ID
@@ -24,6 +25,7 @@ interface InventoryItem {
 
 export default function DashboardPage() {
     const { t } = useLanguage();
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<InventoryItem[]>([]);
 
@@ -118,7 +120,7 @@ export default function DashboardPage() {
             const data = response.data?.items || (response.data && Array.isArray(response.data) ? response.data : []) || response.items || [];
 
             if (!data.length) {
-                alert(t('no_records'));
+                showToast(t('no_records'), 'info');
                 return;
             }
 
@@ -145,9 +147,10 @@ export default function DashboardPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            showToast(t('success'), 'success');
         } catch (error) {
             console.error(error);
-            alert(t('error'));
+            showToast(t('error'), 'error');
         }
     };
 

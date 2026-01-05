@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useToast } from '@/components/toast';
 
 interface AddItemModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface AddItemModalProps {
 }
 
 export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddItemModalProps) {
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<{
         company: string;
@@ -36,19 +38,19 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
         // Manual validation for strictness
         const stockVal = typeof formData.stockCount === 'number' ? formData.stockCount : 0;
         if (!formData.materialReference || !formData.waybillNo || stockVal <= 0) {
-            alert("Lütfen zorunlu alanları doldurunuz (Referans, İrsaliye, Stok)");
+            showToast("Lütfen zorunlu alanları doldurunuz (Referans, İrsaliye, Stok)", 'error');
             return;
         }
 
         // Tam sayı kontrolü - ondalıklı değerleri reddet
         if (!Number.isInteger(stockVal)) {
-            alert("Stok adedi tam sayı olmalıdır (ondalıklı değer girilemez)");
+            showToast("Stok adedi tam sayı olmalıdır (ondalıklı değer girilemez)", 'error');
             return;
         }
 
 
         if (mode === 'Giriş' && !formData.company) {
-            alert("Lütfen firma adını giriniz");
+            showToast("Lütfen firma adını giriniz", 'error');
             return;
         }
 
@@ -66,10 +68,11 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
                 onClose();
                 // Reset form
                 setFormData({ ...formData, waybillNo: '', materialReference: '', stockCount: '', note: '' });
+                showToast("İşlem başarıyla kaydedildi", 'success');
             } else {
                 // API'den gelen hata mesajını göster
                 const data = await res.json();
-                alert(data.error || 'Hata oluştu.');
+                showToast(data.error || 'Hata oluştu.', 'error');
             }
         } catch (error) {
             console.error(error);
