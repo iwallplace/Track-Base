@@ -52,7 +52,7 @@ CREATE INDEX IF NOT EXISTS "InventoryItem_waybillNo_idx" ON "InventoryItem"("way
 CREATE INDEX IF NOT EXISTS "InventoryItem_date_idx" ON "InventoryItem"("date");
 CREATE INDEX IF NOT EXISTS "InventoryItem_createdAt_idx" ON "InventoryItem"("createdAt");
 
--- Admin kullanıcısı oluştur (şifre: admin123 - bcrypt hash)
+-- Admin kullanıcısı oluştur (şifre: admin123)
 INSERT INTO "User" ("id", "name", "email", "username", "password", "role")
 VALUES (
     'admin-user-id',
@@ -60,5 +60,15 @@ VALUES (
     'admin@example.com',
     'admin',
     '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u',
+    'ADMIN'
+) ON CONFLICT ("username") DO NOTHING;
+
+-- Ahmet kullanıcısı oluştur (şifre: Ahmet+4545)
+INSERT INTO "User" ("id", "name", "username", "password", "role")
+VALUES (
+    'ahmet-user-id',
+    'Ahmet Mersin',
+    'ahmet.mersin@se.com',
+    '$2b$10$QQB/yzL44168.14QmmTls.e7juEuZ5DawYFssQhHAO2MCFyqsIuFK',
     'ADMIN'
 ) ON CONFLICT ("username") DO NOTHING;
