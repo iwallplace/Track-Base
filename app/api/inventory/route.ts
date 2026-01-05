@@ -210,7 +210,14 @@ export async function POST(req: Request) {
             return validationErrorResponse(validation.error);
         }
 
-        const data = validation.data;
+        // Enforce Uppercase on critical fields
+        const data = {
+            ...validation.data,
+            company: validation.data.company?.toLocaleUpperCase('tr-TR') || "",
+            waybillNo: validation.data.waybillNo.toLocaleUpperCase('tr-TR'),
+            materialReference: validation.data.materialReference.toLocaleUpperCase('tr-TR'),
+            note: validation.data.note?.toLocaleUpperCase('tr-TR') || ""
+        };
 
         // Calculate Date parts for Europe/Istanbul
         const now = new Date();

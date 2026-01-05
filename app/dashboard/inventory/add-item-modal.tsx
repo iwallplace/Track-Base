@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useToast } from '@/components/toast';
 
@@ -30,26 +30,44 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
         note: ''
     });
 
+    // Reset/Update form when mode changes or modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setFormData(prev => ({
+                ...prev,
+                lastAction: mode
+            }));
+        }
+    }, [isOpen, mode]);
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Uppercase conversion for consistency
+        const upperData = {
+            ...formData,
+            company: formData.company.toLocaleUpperCase('tr-TR'),
+            waybillNo: formData.waybillNo.toLocaleUpperCase('tr-TR'),
+            materialReference: formData.materialReference.toLocaleUpperCase('tr-TR'),
+            note: formData.note.toLocaleUpperCase('tr-TR')
+        };
+
         // Manual validation for strictness
-        const stockVal = typeof formData.stockCount === 'number' ? formData.stockCount : 0;
-        if (!formData.materialReference || !formData.waybillNo || stockVal <= 0) {
+        const stockVal = typeof upperData.stockCount === 'number' ? upperData.stockCount : 0;
+        if (!upperData.materialReference || !upperData.waybillNo || stockVal <= 0) {
             showToast("Lütfen zorunlu alanları doldurunuz (Referans, İrsaliye, Stok)", 'error');
             return;
         }
 
-        // Tam sayı kontrolü - ondalıklı değerleri reddet
+        // Tam sayı kontrolü
         if (!Number.isInteger(stockVal)) {
             showToast("Stok adedi tam sayı olmalıdır (ondalıklı değer girilemez)", 'error');
             return;
         }
 
-
-        if (mode === 'Giriş' && !formData.company) {
+        if (mode === 'Giriş' && !upperData.company) {
             showToast("Lütfen firma adını giriniz", 'error');
             return;
         }
@@ -60,7 +78,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
             const res = await fetch('/api/inventory', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(upperData),
             });
 
             if (res.ok) {
