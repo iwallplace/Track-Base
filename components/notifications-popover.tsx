@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Bell, AlertTriangle, AlertCircle, X, ChevronRight, UserPlus } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Bell, AlertTriangle, ChevronRight, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 interface NotificationItem {
@@ -30,7 +30,7 @@ export function NotificationsPopover() {
         return stored ? JSON.parse(stored) : [];
     };
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             const res = await fetch('/api/notifications');
             if (res.ok) {
@@ -46,13 +46,13 @@ export function NotificationsPopover() {
         } catch (error) {
             console.error('Bildirimler alınamadı', error);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 60000); // Poll every minute
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchNotifications]);
 
     // Close on click outside
     useEffect(() => {

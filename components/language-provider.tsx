@@ -13,13 +13,17 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const [language, setLanguage] = useState<Language>('tr');
+    const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem('language') as Language;
-        if (stored && (stored === 'tr' || stored === 'en')) {
-            setLanguage(stored);
+        if (!isInitialized) {
+            const stored = localStorage.getItem('language') as Language;
+            if (stored && (stored === 'tr' || stored === 'en')) {
+                setLanguage(stored);
+            }
+            setIsInitialized(true);
         }
-    }, []);
+    }, [isInitialized]);
 
     const handleSetLanguage = (lang: Language) => {
         setLanguage(lang);
