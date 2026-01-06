@@ -41,10 +41,12 @@ export async function POST(req: Request) {
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
     try {
-        const { reportData } = await req.json();
+        const { reportData, language = 'tr' } = await req.json(); // Default to 'tr' if no language provided
 
-        // Check cache first
-        const cacheKey = generateCacheKey(reportData);
+        // Check cache first (Cache key should include language now!)
+        // However, user might change language and request same data.
+        // Let's create a composite key.
+        const cacheKey = generateCacheKey({ ...reportData, language });
         const cachedEntry = summaryCache.get(cacheKey);
 
         if (cachedEntry) {
@@ -69,77 +71,54 @@ export async function POST(req: Request) {
             }, { status: 500 });
         }
 
+        const isEnglish = language === 'en';
+
         const prompt = `
-Sen bir "Kıdemli Yönetici"sin. Aşağıdaki stok raporunu sadece en kritik noktalarıyla, **kısa, çarpıcı ve net** bir şekilde özetle.
-Yönetim kurulunun vakti kısıtlı; sadece "ne durumda olduğumuzu", "neyin acil olduğunu" ve "ne yapılması gerektiğini" bilmek istiyorlar.
+You are a "Senior Executive". Summarize the stock report below in a **short, striking, and clear** manner, highlighting only the most critical points.
+The board has limited time; they just want to know "how we are doing", "what is urgent", and "what needs to be done".
 
-**ÖNEMLİ KURALLAR:**
-1. **ASLA Markdown, madde işareti (*), tire (-) veya kalın yazı (**) kullanma.** Düz yazı paragrafı olsun.
-2. **Kurumsal ve Ciddi Ol:** Asla "canım", "tatlım", "arkadaşlar" gibi laubali ifadeler kullanma.
-3. Resmi bir rapor dili kullan ama robotik olma. Akıcı ve profesyonel bir Türkçe ile yaz.
-4. Başlık kullanma.
+**IMPORTANT RULES:**
+1. **NEVER use Markdown, bullet points (*), dashes (-), or bold text (**).** Provide a plain text paragraph.
+2. **Be Corporate and Serious:** Never use casual expressions like "dear", "folks", etc.
+3. Use a formal reporting language but don't be robotic. Write in fluent and professional ${isEnglish ? 'English' : 'Turkish'}.
+4. Do not use headers.
 
-1. **Durum:** Tek cümleyle stok sağlığımız nasıl?
-2. **Kritik:** Acil aksiyon gerektiren risk var mı?
-3. **Öneri:** Lider olarak ne yapmalıyız?
+1. **Status:** How is our stock health in one sentence?
+2. **Critical:** Is there any urgent risk requiring action?
+3. **Suggestion:** As a leader, what should we do?
 
-Veriler:
-Toplam Stok: ${reportData.totalStock}
-Bu Ay Giren: ${reportData.monthlyEntry}
-Bekleyen İşler: ${reportData.pendingTasks}
-Aktif Firma Sayısı: ${reportData.activeCompanies}
-Stok Devir Hızı: %${reportData.turnoverRate}
-Ölü Stok (90+ gün hareketsiz): ${reportData.deadStockCount}
-Kritik Seviye (Low Stock): ${reportData.lowStockCount}
+Data:
+Total Stock: ${reportData.totalStock}
+Monthly Entry: ${reportData.monthlyEntry}
+Turnover Rate: %${reportData.turnoverRate}
+Dead Stock (90+ days): ${reportData.deadStockCount}
+Critical Level (Low Stock): ${reportData.lowStockCount}
 
-Firma Bazlı Dağılım:
+Company Distribution:
 ${JSON.stringify(reportData.companyStocks)}
 
-İşlem Durumu Dağılımı:
+Transaction Status Distribution:
 ${JSON.stringify(reportData.statusCounts)}
 
-Yanıtı Türkçe ver.
+**Output Language:** ${isEnglish ? 'English' : 'Turkish'}
         `;
 
         // Direct fetch to support experimental model and config provided by user
-        const modelId = "gemini-flash-latest";
+        const modelId = "gemini-flash-latest"; // Or gemini-2.0-flash-exp
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
-        const payload = {
-            contents: [
-                {
-                    role: "user",
-                    parts: [
-                        {
-                            text: prompt
-                        }
-                    ]
-                }
-            ],
-            generationConfig: {
-                thinkingConfig: {
-                    thinkingBudget: 1024 // Setting a reasonable budget, user example had -1 but strict types might complain, trying 1024 or just passing it raw
-                }
-            },
-            // User provided example had thinkingBudget: -1. Let's try to match it but maybe as a number.
-            // Actually, let's stick to the user provided structure closely.
-        };
-
-        // Redefining payload to exactly match user structure with -1 if possible, 
-        // but beware of JSON serialization of numbers if API expects int.
         const userPayload = {
             contents: [{
                 role: "user",
                 parts: [{ text: prompt }]
             }],
             generationConfig: {
-                thinkingConfig: {
-                    thinkingBudget: 1024 // Using a positive integer as -1 might be invalid or internal testing. Let's use a safe high number.
-                }
-            },
-            tools: [{
-                googleSearch: {}
-            }]
+                // thinkingConfig: {
+                //    thinkingBudget: 1024 
+                // }
+                // Removing thinkingConfig for now as 'gemini-flash-latest' might not support it or it causes 400s if not on experimental endpoint.
+                // Keeping it simple and robust.
+            }
         };
 
         const res = await fetch(url, {
