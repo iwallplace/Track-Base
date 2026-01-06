@@ -16,6 +16,7 @@ export async function GET() {
         // 1. Low Stock Notifications (For all users or just authorized? Usually everyone needs to know stock issues, or maybe just warehouse staff. Let's keep it for all for now)
         const lowStockItems = await prisma.inventoryItem.findMany({
             where: {
+                deletedAt: null,
                 stockCount: {
                     lt: 20,
                     gt: 0

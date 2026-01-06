@@ -49,29 +49,30 @@ export const runInventoryTool = async (name: string, args: Record<string, any>) 
     switch (name) {
         case "getLowStockItems":
             return await prisma.inventoryItem.findMany({
-                where: { stockCount: { lt: 20, gt: 0 } },
+                where: { deletedAt: null, stockCount: { lt: 20, gt: 0 } },
                 take: 10,
                 select: { materialReference: true, stockCount: true, company: true }
             });
 
         case "getCompanyStock":
             const items = await prisma.inventoryItem.findMany({
-                where: { company: { contains: args.companyName } },
+                where: { deletedAt: null, company: { contains: args.companyName } },
                 take: 5,
                 orderBy: { stockCount: 'desc' }
             });
             const total = await prisma.inventoryItem.aggregate({
-                where: { company: { contains: args.companyName } },
+                where: { deletedAt: null, company: { contains: args.companyName } },
                 _sum: { stockCount: true }
             });
             return {
-                totalStock: total._sum.stockCount ?? 0,
+                totalStock: total._sum?.stockCount ?? 0,
                 topItems: items
             };
 
         case "searchInventory":
             return await prisma.inventoryItem.findMany({
                 where: {
+                    deletedAt: null,
                     OR: [
                         { materialReference: { contains: args.query } },
                         // company search is handled by getCompanyStock, but adding here as backup
@@ -82,10 +83,10 @@ export const runInventoryTool = async (name: string, args: Record<string, any>) 
             });
 
         case "getDashboardSummary":
-            const totalStock = await prisma.inventoryItem.aggregate({ _sum: { stockCount: true } });
-            const lowStock = await prisma.inventoryItem.count({ where: { stockCount: { lt: 20, gt: 0 } } });
+            const totalStock = await prisma.inventoryItem.aggregate({ where: { deletedAt: null }, _sum: { stockCount: true } });
+            const lowStock = await prisma.inventoryItem.count({ where: { deletedAt: null, stockCount: { lt: 20, gt: 0 } } });
             return {
-                totalStock: totalStock._sum.stockCount || 0,
+                totalStock: totalStock._sum?.stockCount || 0,
                 criticalItems: lowStock,
                 status: "Normal"
             };

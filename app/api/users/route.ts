@@ -71,6 +71,9 @@ export async function POST(req: Request) {
         const { name, username, password, role } = validation.data;
 
         // Check if username already exists
+        const existing = await prisma.user.findUnique({
+            where: { username }
+        });
         if (existing) {
             return errorResponse("Bu kullanıcı adı zaten kullanılıyor", 409);
         }

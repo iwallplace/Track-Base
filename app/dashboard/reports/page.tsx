@@ -104,6 +104,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         // 2. Fetch ALL Data for accurate Stock Calculation (Snapshot)
         // We need full history to calculate current balance of any material.
         const allHistory = await prisma.inventoryItem.findMany({
+            where: {
+                deletedAt: null
+            },
             select: {
                 id: true,
                 materialReference: true,

@@ -51,6 +51,6 @@ export const handleGeminiError = (error: unknown) => {
     return {
         error: true,
         code: "INTERNAL_ERROR",
-        message: "AI Hatası: " + (error.message || String(error)) // Exposing real error for debug
+        message: "AI Hatası: " + (error instanceof Error ? error.message : String(error))
     };
 };
