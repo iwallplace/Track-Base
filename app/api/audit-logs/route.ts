@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/db";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,9 @@ export async function GET() {
             return new NextResponse("Unauthorized", { status: 401 });
         }
 
-        // Strict Admin Check as requested
-        if (session.user.role !== 'ADMIN') {
+        // RBAC: audit.view izin kontrolü
+        const canViewAudit = await hasPermission(session.user.role || "USER", 'audit.view');
+        if (!canViewAudit) {
             return new NextResponse("Forbidden", { status: 403 });
         }
 

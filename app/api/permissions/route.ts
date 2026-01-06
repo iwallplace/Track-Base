@@ -10,17 +10,33 @@ import {
     devError
 } from "@/lib/api-response";
 
-// Permission labels for UI
+// Permission labels for UI - 17 izin
 const PERMISSION_LABELS: Record<string, string> = {
+    // Veri Erişimi
     'data.view': 'Tüm verileri görüntüleme',
+
+    // Envanter İzinleri
+    'inventory.view': 'Envanter listesini görme',
     'inventory.create': 'Envanter kaydı ekleme',
     'inventory.delete': 'Envanter kaydı silme',
+    'inventory.export': 'Excel export',
+
+    // Kullanıcı Yönetimi
+    'users.view': 'Kullanıcı listesini görme',
     'users.create': 'Kullanıcı ekleme',
+    'users.edit': 'Kullanıcı düzenleme',
     'users.delete': 'Kullanıcı silme',
     'users.role.change': 'Kullanıcı rolü değiştirme',
-    'settings.edit': 'Sistem ayarlarını düzenleme',
+
+    // Sistem Ayarları
+    'settings.view': 'Ayarları görüntüleme',
+    'settings.edit': 'Profil düzenleme',
+
+    // Özellikler
     'ai.use': 'AI asistanını kullanma',
     'reports.view': 'Raporları görüntüleme',
+    'audit.view': 'Sistem kayıtlarını görme',
+    'notifications.view': 'Bildirimleri görme',
     'system.status.view': 'Sistem durumunu görüntüleme'
 };
 
@@ -103,6 +119,10 @@ export async function PUT(req: Request) {
             update: { granted },
             create: { role, permission, granted }
         });
+
+        // Invalidate permission cache so changes take effect immediately
+        const { invalidatePermissionCache } = await import("@/lib/permissions");
+        invalidatePermissionCache();
 
         return successResponse(updated, "Yetki güncellendi");
     } catch (error) {

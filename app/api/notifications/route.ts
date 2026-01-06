@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,12 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) {
         return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // RBAC: notifications.view izin kontrolü
+    const canViewNotifications = await hasPermission(session.user.role || "USER", 'notifications.view');
+    if (!canViewNotifications) {
+        return NextResponse.json([]); // Sessizce boş dön
     }
 
     try {

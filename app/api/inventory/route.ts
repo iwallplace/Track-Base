@@ -37,6 +37,12 @@ export async function GET(req: Request) {
         return unauthorizedResponse();
     }
 
+    // RBAC: inventory.view izin kontrolü
+    const canViewInventory = await hasPermission(session.user.role || "USER", 'inventory.view');
+    if (!canViewInventory) {
+        return forbiddenResponse("Envanter listesini görüntüleme yetkiniz bulunmamaktadır");
+    }
+
     const { searchParams } = new URL(req.url);
     const view = searchParams.get('view');
     const page = parseInt(searchParams.get('page') || '1');

@@ -3,6 +3,7 @@ import ReportsView from './reports-view';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     try {
         const session = await getServerSession(authOptions);
         if (!session) redirect("/login");
-        if (session.user.role === 'USER') {
+
+        // RBAC: reports.view dinamik izin kontrolü
+        const canViewReports = await hasPermission(session.user.role || "USER", 'reports.view');
+        if (!canViewReports) {
             return (
                 <div className="flex h-[50vh] flex-col items-center justify-center text-center">
                     <h2 className="text-2xl font-bold text-white">Erişim Reddedildi</h2>

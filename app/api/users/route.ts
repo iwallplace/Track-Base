@@ -14,13 +14,18 @@ import {
     devError
 } from "@/lib/api-response";
 import { createAuditLog } from "@/lib/audit";
-
-const ALLOWED_ROLES = ['ADMIN', 'IME', 'KALITE'];
+import { hasPermission } from "@/lib/permissions";
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) {
         return unauthorizedResponse();
+    }
+
+    // RBAC: users.view izin kontrolü
+    const canViewUsers = await hasPermission(session.user.role || "USER", 'users.view');
+    if (!canViewUsers) {
+        return forbiddenResponse("Kullanıcı listesini görüntüleme yetkiniz bulunmamaktadır");
     }
 
     const { searchParams } = new URL(req.url);
@@ -54,9 +59,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
+    if (!session) return unauthorizedResponse();
 
-    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
-        return unauthorizedResponse();
+    // RBAC: users.create izin kontrolü
+    const canCreateUsers = await hasPermission(session.user.role || "USER", 'users.create');
+    if (!canCreateUsers) {
+        return forbiddenResponse("Kullanıcı oluşturma yetkiniz bulunmamaktadır");
     }
 
     try {
@@ -112,9 +120,12 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
+    if (!session) return unauthorizedResponse();
 
-    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
-        return unauthorizedResponse();
+    // RBAC: users.delete izin kontrolü
+    const canDeleteUsers = await hasPermission(session.user.role || "USER", 'users.delete');
+    if (!canDeleteUsers) {
+        return forbiddenResponse("Kullanıcı silme yetkiniz bulunmamaktadır");
     }
 
     const { searchParams } = new URL(req.url);
@@ -193,9 +204,12 @@ export async function PATCH(req: Request) {
 
 export async function PUT(req: Request) {
     const session = await getServerSession(authOptions);
+    if (!session) return unauthorizedResponse();
 
-    if (!session || !session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
-        return unauthorizedResponse();
+    // RBAC: users.edit izin kontrolü
+    const canEditUsers = await hasPermission(session.user.role || "USER", 'users.edit');
+    if (!canEditUsers) {
+        return forbiddenResponse("Kullanıcı düzenleme yetkiniz bulunmamaktadır");
     }
 
     try {

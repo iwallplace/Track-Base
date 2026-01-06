@@ -4,8 +4,10 @@ import { getGeminiClient, GEMINI_MODEL_CONFIG, handleGeminiError } from "@/lib/a
 import { INVENTORY_TOOLS, runInventoryTool } from "@/lib/ai/inventory-tools";
 import { sanitizeUserMessage, validateAIResponse, DEFENSIVE_SYSTEM_INSTRUCTION } from "@/lib/ai/prompt-guard";
 import { chatMessageSchema, validate } from "@/lib/validations";
+import { hasPermission } from "@/lib/permissions";
 import {
     unauthorizedResponse,
+    forbiddenResponse,
     validationErrorResponse,
     errorResponse,
     devLog,
@@ -16,6 +18,12 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return unauthorizedResponse();
+
+    // RBAC: ai.use izin kontrolü
+    const canUseAI = await hasPermission(session.user.role || "USER", 'ai.use');
+    if (!canUseAI) {
+        return forbiddenResponse("AI asistanını kullanma yetkiniz bulunmamaktadır");
+    }
 
     try {
         const body = await req.json();
