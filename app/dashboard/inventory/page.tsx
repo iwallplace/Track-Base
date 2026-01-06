@@ -379,7 +379,7 @@ export default function DashboardPage() {
                             )}
                             {items.map((item) => (
                                 <motion.tr
-                                    key={item.materialReference}
+                                    key={item.id}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}`)}
