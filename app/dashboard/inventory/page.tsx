@@ -383,7 +383,7 @@ export default function DashboardPage() {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}`)}
-                                    className="hover:bg-muted/50 transition-colors cursor-pointer group"
+                                    className={`hover:bg-muted/50 transition-colors cursor-pointer group ${showDeleted ? 'opacity-75 bg-red-50/10 border-l-2 border-l-red-500' : ''}`}
                                 >
                                     <td className="px-6 py-4">
                                         <div className="font-medium text-foreground">{item.year}</div>

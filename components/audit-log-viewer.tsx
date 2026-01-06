@@ -62,6 +62,7 @@ export default function AuditLogViewer() {
         if (action.includes('DELETE')) return 'text-red-500 bg-red-500/10 border-red-500/20';
         if (action.includes('UPDATE')) return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
         if (action.includes('CREATE')) return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+        if (action.includes('RESTORE')) return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
         return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
     };
 
