@@ -20,7 +20,20 @@ export async function GET() {
     }
 
     try {
-        // 1. Low Stock Notifications (For all users or just authorized? Usually everyone needs to know stock issues, or maybe just warehouse staff. Let's keep it for all for now)
+        // Fetch dismissed notification IDs for this user
+        const dismissedStates = await prisma.notificationState.findMany({
+            where: {
+                userId: session.user.id
+            },
+            select: {
+                notificationId: true,
+                type: true
+            }
+        });
+
+        const dismissedSet = new Set(dismissedStates.map(s => `${s.type}:${s.notificationId}`));
+
+        // 1. Low Stock Notifications
         const lowStockItems = await prisma.inventoryItem.findMany({
             where: {
                 deletedAt: null,
@@ -50,15 +63,22 @@ export async function GET() {
             meta: any;
             link: string;
             date: Date;
-        }> = lowStockItems.map(item => ({
-            type: 'low_stock',
-            id: item.id,
-            title: 'Kritik Stok Seviyesi',
-            message: `${item.materialReference} referanslı ürün stoğu ${item.stockCount} adete düştü.`,
-            meta: { company: item.company },
-            link: `/dashboard/inventory/${item.materialReference}?highlight=${item.id}`,
-            date: item.updatedAt
-        }));
+        }> = [];
+
+        // Process Low Stock
+        lowStockItems.forEach(item => {
+            if (!dismissedSet.has(`low_stock:${item.id}`)) {
+                notifications.push({
+                    type: 'low_stock',
+                    id: item.id,
+                    title: 'Kritik Stok Seviyesi',
+                    message: `${item.materialReference} referanslı ürün stoğu ${item.stockCount} adete düştü.`,
+                    meta: { company: item.company },
+                    link: `/dashboard/inventory/${item.materialReference}?highlight=${item.id}`,
+                    date: item.updatedAt
+                });
+            }
+        });
 
         // 2. User Activity Notifications (Only for ADMIN, IME, KALITE)
         if (session.user.role && ['ADMIN', 'IME', 'KALITE'].includes(session.user.role)) {
@@ -70,17 +90,19 @@ export async function GET() {
                 orderBy: { createdAt: 'desc' }
             });
 
-            const userNotifications = newUsers.map(user => ({
-                type: 'new_user' as const,
-                id: user.id,
-                title: 'Yeni Kullanıcı Katıldı',
-                message: `${user.name} (${user.role}) sisteme eklendi.`,
-                meta: { role: user.role },
-                link: '/dashboard/users',
-                date: user.createdAt
-            }));
-
-            notifications.push(...userNotifications);
+            newUsers.forEach(user => {
+                if (!dismissedSet.has(`new_user:${user.id}`)) {
+                    notifications.push({
+                        type: 'new_user' as const,
+                        id: user.id,
+                        title: 'Yeni Kullanıcı Katıldı',
+                        message: `${user.name} (${user.role}) sisteme eklendi.`,
+                        meta: { role: user.role },
+                        link: '/dashboard/users',
+                        date: user.createdAt
+                    });
+                }
+            });
         }
 
         // Sort combined notifications by date desc

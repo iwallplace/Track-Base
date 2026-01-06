@@ -22,6 +22,7 @@ model User {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // Soft Delete support
   auditLogs        AuditLog[]
+  notifications    NotificationState[]
 }
 
 model InventoryItem {
@@ -89,4 +90,17 @@ model RateLimitEntry {
 
   @@index([identifier, endpoint, timestamp])
   @@index([timestamp]) // For cleanup of old entries
+}
+
+model NotificationState {
+  id             String   @id @default(cuid())
+  userId         String
+  notificationId String   // ID of the entity (e.g., InventoryItem ID for low stock)
+  type           String   // 'low_stock' | 'new_user'
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId, type])
+  @@index([userId])
 }

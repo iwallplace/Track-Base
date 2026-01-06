@@ -23,25 +23,13 @@ export function NotificationsPopover() {
     const [unreadCount, setUnreadCount] = useState(0);
     const popoverRef = useRef<HTMLDivElement>(null);
 
-    // Helper to get dismissed IDs from LocalStorage
-    const getDismissedIds = () => {
-        if (typeof window === 'undefined') return [];
-        const stored = localStorage.getItem('dismissed_notifications');
-        return stored ? JSON.parse(stored) : [];
-    };
-
     const fetchNotifications = useCallback(async () => {
         try {
             const res = await fetch('/api/notifications');
             if (res.ok) {
                 const data: NotificationItem[] = await res.json();
-
-                // Filter out dismissed notifications
-                const dismissedIds = getDismissedIds();
-                const activeNotifications = data.filter(n => !dismissedIds.includes(n.id));
-
-                setNotifications(activeNotifications);
-                setUnreadCount(activeNotifications.length);
+                setNotifications(data);
+                setUnreadCount(data.length);
             }
         } catch (error) {
             console.error('Bildirimler alınamadı', error);
@@ -70,16 +58,47 @@ export function NotificationsPopover() {
         };
     }, [isOpen]);
 
-    const handleClearAll = () => {
-        // Save all current IDs to LocalStorage
-        const currentIds = notifications.map(n => n.id);
-        const previouslyDismissed = getDismissedIds();
-        const newDismissed = [...new Set([...previouslyDismissed, ...currentIds])];
+    const handleClearAll = async () => {
+        const idsToDismiss = notifications.map(n => n.id);
 
-        localStorage.setItem('dismissed_notifications', JSON.stringify(newDismissed));
+        if (idsToDismiss.length === 0) return;
 
-        setNotifications([]);
-        setUnreadCount(0);
+        try {
+            // Optimistic UI update
+            setNotifications([]);
+            setUnreadCount(0);
+
+            // Send dismissal to server (fire and forget mostly, but good to handle error if critical, here just log)
+            // We should send separate requests per type or one request with mixed types?
+            // The API takes 'type' as string. But our list has mixed types.
+            // Current API design: "type" field in payload applies to ALL ids.
+            // My implementation helper `dismissSchema` has `type` field.
+            // Schema has `@@unique([userId, notificationId, type])`.
+
+            // OPTION 1: Group by type and send multiple requests.
+            const lows = notifications.filter(n => n.type === 'low_stock').map(n => n.id);
+            const users = notifications.filter(n => n.type === 'new_user').map(n => n.id);
+
+            if (lows.length > 0) {
+                await fetch('/api/notifications/dismiss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: lows, type: 'low_stock' })
+                });
+            }
+
+            if (users.length > 0) {
+                await fetch('/api/notifications/dismiss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: users, type: 'new_user' })
+                });
+            }
+
+        } catch (error) {
+            console.error('Dismissal failed', error);
+            // Revert optimistic update? Maybe too complex for now.
+        }
     };
 
     return (
