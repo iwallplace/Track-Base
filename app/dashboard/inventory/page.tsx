@@ -119,10 +119,8 @@ export default function DashboardPage() {
                         // Check if role has inventory.delete
                         // Note: The API returns { permissions: { ROLE: { perm: bool } } }
                         const hasPerm = data.data.permissions[role]?.['inventory.delete'];
-                        // Also ADMIN fallback if needed, but our API should return correct map now
-                        setCanDelete(!!hasPerm || (role === 'ADMIN' && true)); // Fallback true for ADMIN until DB is populated? No, rely on API.
-                        // Actually, let's trust the API.
-                        setCanDelete(!!hasPerm);
+                        // Also ADMIN fallback if needed
+                        setCanDelete(!!hasPerm || role === 'ADMIN');
                     }
                 } catch (e) {
                     console.error('Permission check failed', e);

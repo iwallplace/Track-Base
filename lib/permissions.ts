@@ -10,8 +10,14 @@ const CACHE_TTL = 60000; // 1 minute cache
  */
 export async function hasPermission(role: string, permission: string): Promise<boolean> {
     // Protected permissions that ADMIN always has
+    // Protected permissions that ADMIN always has
+    // Project Owner (ADMIN) should have access to everything effectively
+    if (role === 'ADMIN') return true;
+
+    /* Previous restricted check
     const PROTECTED = ['data.view', 'users.role.change', 'settings.edit'];
     if (role === 'ADMIN' && PROTECTED.includes(permission)) return true;
+    */
 
     try {
         // Check cache first
