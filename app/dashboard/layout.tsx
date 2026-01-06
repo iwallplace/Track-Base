@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, BookOpen, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { ModeToggle } from '@/components/theme-toggle';
 import { NotificationsPopover } from '@/components/notifications-popover';
@@ -24,6 +24,8 @@ export default function DashboardLayoutContent({
     const navigation = [
         { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
         { name: t('inventory'), href: '/dashboard/inventory', icon: Package },
+        // Show Logs to ADMIN only
+        ...(session?.user?.role === 'ADMIN' ? [{ name: 'Sistem Kayıtları', href: '/dashboard/logs', icon: BookOpen }] : []),
         { name: t('users'), href: '/dashboard/users', icon: Users },
         { name: t('settings'), href: '/dashboard/settings', icon: Settings },
     ];

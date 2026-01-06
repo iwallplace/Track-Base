@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Lock, Mail, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/components/language-provider';
-import AuditLogViewer from '@/components/audit-log-viewer';
 
 export default function SettingsPage() {
     const { data: session, update } = useSession();
@@ -128,39 +127,6 @@ export default function SettingsPage() {
                                             src={avatarUrl}
                                             alt={seed}
                                             className="w-full h-full object-cover"
-                                        />
-                                        {isSelected && (
-                                            <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                                <CheckCircle2 className="h-6 w-6 text-white drop-shadow-md" />
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-border">
-                        <p className="text-sm font-medium text-muted-foreground">{t('fun_chars')}</p>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-                            {['Bear', 'Rabbit', 'Cat', 'Dog', 'Lion', 'Panda', 'Robot1', 'Robot2', 'Ghost', 'Alien'].map((seed) => {
-                                const styles = ['fun-emoji', 'bottts', 'adventurer'];
-                                const style = seed.startsWith('Robot') ? 'bottts' : (['Ghost', 'Bear'].includes(seed) ? 'fun-emoji' : 'adventurer');
-                                const avatarUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
-                                const isSelected = formData.image === avatarUrl;
-
-                                return (
-                                    <button
-                                        key={seed}
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, image: avatarUrl })}
-                                        className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-500 scale-110 ring-2 ring-blue-500/50' : 'border-input hover:border-gray-500 hover:scale-105'
-                                            }`}
-                                    >
-                                        <img
-                                            src={avatarUrl}
-                                            alt={seed}
-                                            className="w-full h-full object-cover bg-slate-100"
                                         />
                                         {isSelected && (
                                             <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
@@ -321,11 +287,7 @@ export default function SettingsPage() {
             </form>
 
             <div className="pt-8 border-t border-border">
-                {session?.user?.role === 'ADMIN' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <AuditLogViewer />
-                    </div>
-                )}
+                {/* Audit Log moved to /dashboard/logs */}
             </div>
         </div>
     );
