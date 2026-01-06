@@ -190,7 +190,7 @@ export const translations = {
         profile_picture_select: 'Profil Resmi Seçimi',
         human_chars: 'İnsan Karakterler',
         fun_chars: 'Çizgi & Eğlenceli Karakterler',
-        rick_morty_chars: 'Rick and Morty',
+
         personal_info: 'Kişisel Bilgiler',
         change_password: 'Şifre Değiştir',
         current_password: 'Mevcut Şifre',
@@ -396,7 +396,7 @@ export const translations = {
         profile_picture_select: 'Profile Picture Selection',
         human_chars: 'Human Characters',
         fun_chars: 'Cartoon & Fun Characters',
-        rick_morty_chars: 'Rick and Morty',
+
         personal_info: 'Personal Information',
         change_password: 'Change Password',
         current_password: 'Current Password',

@@ -60,7 +60,7 @@ export default function DashboardLayoutContent({
                     {!collapsed && (
                         <div>
                             <h1 className="text-sm font-bold text-foreground">Project Track Base</h1>
-                            <p className="text-xs text-muted-foreground font-medium whitespace-nowrap">Architected by <Link href="https://www.linkedin.com/in/ahmetmersin/" target="_blank" className="text-muted-foreground font-bold hover:text-primary transition-colors">MERSIN AXIOM</Link></p>
+                            <p className="text-xs text-muted-foreground font-medium whitespace-nowrap">Architected by <Link href="https://www.linkedin.com/in/ahmetmersin/" target="_blank" className="text-muted-foreground font-bold hover:text-primary transition-colors">Ahmet Mersin</Link></p>
                         </div>
                     )}
                 </div>

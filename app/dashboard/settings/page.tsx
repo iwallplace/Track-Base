@@ -140,36 +140,7 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-border">
-                    <p className="text-sm font-medium text-muted-foreground">{t('rick_morty_chars') || 'Rick and Morty'}</p>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-                        {[1, 2, 3, 4, 5, 47, 118, 242, 244, 180, 265, 331].map((id) => {
-                            const avatarUrl = `https://rickandmortyapi.com/api/character/avatar/${id}.jpeg`;
-                            const isSelected = formData.image === avatarUrl;
 
-                            return (
-                                <button
-                                    key={`rm-${id}`}
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, image: avatarUrl })}
-                                    className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-500 scale-110 ring-2 ring-blue-500/50' : 'border-input hover:border-gray-500 hover:scale-105'
-                                        }`}
-                                >
-                                    <img
-                                        src={avatarUrl}
-                                        alt={`Rick and Morty ${id}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {isSelected && (
-                                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                            <CheckCircle2 className="h-6 w-6 text-white drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
 
                 {/* Profile Information */}
                 <div className="rounded-xl border border-border bg-card p-6 space-y-6 text-foreground">

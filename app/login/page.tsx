@@ -70,7 +70,7 @@ export default function LoginPage() {
                 {/* Footer Signature */}
                 <div className="absolute bottom-4 w-full text-center">
                     <p className="text-xs text-muted-foreground font-medium">
-                        Architected by <Link href="https://www.linkedin.com/in/ahmetmersin/" target="_blank" className="text-muted-foreground font-bold hover:text-blue-500 transition-colors cursor-default">MERSIN AXIOM</Link>
+                        Architected by <Link href="https://www.linkedin.com/in/ahmetmersin/" target="_blank" className="text-muted-foreground font-bold hover:text-blue-500 transition-colors cursor-default">Ahmet Mersin</Link>
                     </p>
                 </div>
                 <div className="w-full max-w-md space-y-8">
