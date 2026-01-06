@@ -62,6 +62,7 @@ export const authOptions: NextAuthOptions = {
         signIn: "/login",
     },
     session: {
-        strategy: "jwt"
+        strategy: "jwt",
+        maxAge: 7 * 24 * 60 * 60, // 7 days (reduced from default 30 days for security)
     }
 };

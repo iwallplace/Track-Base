@@ -30,6 +30,12 @@ export default withAuth(
         response.headers.set('X-XSS-Protection', '1; mode=block');
         response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
+        // HSTS - Force HTTPS (1 year with subdomains)
+        response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+        // Permissions-Policy - Disable unnecessary browser features
+        response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+
         // 2. Rate Limiting
         // Note: Edge Middleware requires external storage (Redis/KV) for effective rate limiting.
         // Current architecture does not support in-memory state sharing across edge nodes.
@@ -55,5 +61,7 @@ export const config = {
         "/api/notifications/:path*",
         "/api/ai/:path*",
         "/api/email/:path*",
+        "/api/audit-logs/:path*",
+        "/api/permissions/:path*",
     ],
 };
