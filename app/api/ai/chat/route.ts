@@ -2,30 +2,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { getGeminiClient, GEMINI_MODEL_CONFIG, handleGeminiError } from "@/lib/ai/gemini-client";
 import { INVENTORY_TOOLS, runInventoryTool } from "@/lib/ai/inventory-tools";
+import { sanitizeUserMessage, validateAIResponse, DEFENSIVE_SYSTEM_INSTRUCTION } from "@/lib/ai/prompt-guard";
 import { chatMessageSchema, validate } from "@/lib/validations";
 import {
-    successResponse,
     unauthorizedResponse,
     validationErrorResponse,
+    errorResponse,
     devLog,
     devError
 } from "@/lib/api-response";
 import { NextResponse } from 'next/server';
-
-const SYSTEM_INSTRUCTION = `
-Sen "Intra Arc" adında yapay zeka destekli bir stok takip asistanısın.
-Bu sistem **MERSIN AXIOM** tarafından mimarisi tasarlanmış ve geliştirilmiştir.
-
-Görevin: Kullanıcının stoklarla ilgili sorularını, sana verilen araçları (tools) kullanarak yanıtlamak.
-
-Kurallar:
-1. **ASLA Markdown, madde işareti (*), tire (-) veya kalın yazı (**) kullanma.**
-2. **Kurumsal ve profesyonel ol.** Asla "canım", "tatlım" gibi laubali ifadeler kullanma.
-3. Kısa, net ve saygılı cümleler kur. İş arkadaşına bilgi verir gibi konuş.
-4. "Stok durumu ne?" derse 'getDashboardSummary' kullan.
-5. "Seni kim yaptı?", "Bu site kime ait?" gibi sorulara "Bu sistemin mimarisi MERSIN AXIOM tarafından tasarlanmıştır." diye yanıt ver.
-6. Bunun haricinde sadece stok sorularını yanıtla.
-`;
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -42,10 +28,23 @@ export async function POST(req: Request) {
 
         const { message, history } = validation.data;
 
+        // =====================
+        // PROMPT INJECTION GUARD
+        // =====================
+        const sanitizationResult = sanitizeUserMessage(message);
+        if (!sanitizationResult.safe) {
+            console.warn(`[SECURITY] Prompt injection attempt blocked from user: ${session.user.id}`);
+            return errorResponse(
+                sanitizationResult.reason || "Güvenlik politikasına aykırı içerik tespit edildi",
+                400,
+                "PROMPT_INJECTION_BLOCKED"
+            );
+        }
+
         const genAI = getGeminiClient();
         const model = genAI.getGenerativeModel({
             ...GEMINI_MODEL_CONFIG,
-            systemInstruction: SYSTEM_INSTRUCTION,
+            systemInstruction: DEFENSIVE_SYSTEM_INSTRUCTION,
             tools: [{ functionDeclarations: Object.values(INVENTORY_TOOLS) }] as unknown as undefined
         });
 
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
             history: validHistory,
         });
 
-        const result = await chat.sendMessage(message);
+        const result = await chat.sendMessage(sanitizationResult.sanitized);
         const response = result.response;
 
         // Handle Function Calls
@@ -82,15 +81,22 @@ export async function POST(req: Request) {
                 }
             }]);
 
+            // Validate AI response for sensitive data
+            const responseText = finalResult.response.text();
+            const validatedResponse = validateAIResponse(responseText);
+
             return NextResponse.json({
-                text: finalResult.response.text(),
+                text: validatedResponse.filtered,
                 toolUsed: call.name
             });
         }
 
-        // Normal text response
+        // Normal text response - validate before returning
+        const responseText = response.text();
+        const validatedResponse = validateAIResponse(responseText);
+
         return NextResponse.json({
-            text: response.text()
+            text: validatedResponse.filtered
         });
 
     } catch (error) {

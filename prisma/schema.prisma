@@ -79,3 +79,14 @@ model AuditLog {
   @@index([action])
   @@index([entity])
 }
+
+// Rate Limiting (Free - uses existing PostgreSQL)
+model RateLimitEntry {
+  id         String   @id @default(cuid())
+  identifier String   // IP address or user ID
+  endpoint   String   // e.g., "auth", "ai", "api"
+  timestamp  DateTime @default(now())
+
+  @@index([identifier, endpoint, timestamp])
+  @@index([timestamp]) // For cleanup of old entries
+}

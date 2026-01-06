@@ -1,13 +1,56 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { rateLimit, isRateLimitEnabled } from "@/lib/rate-limit";
 
 export default withAuth(
-    function middleware(req: NextRequest) {
+    async function middleware(req: NextRequest) {
         const response = NextResponse.next();
 
-        // 1. CSP (Content Security Policy)
-        // Adjust 'script-src' etc. as needed for your specific external scripts (e.g. Vercel Analytics, Google etc.)
+        // =====================
+        // 1. Rate Limiting (PostgreSQL - Free)
+        // =====================
+        if (isRateLimitEnabled()) {
+            // Use IP address as identifier (with fallback)
+            const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+                || req.headers.get("x-real-ip")
+                || "anonymous";
+
+            const result = await rateLimit(ip, req.nextUrl.pathname);
+
+            // Add rate limit headers to response
+            response.headers.set("X-RateLimit-Limit", result.limit.toString());
+            response.headers.set("X-RateLimit-Remaining", result.remaining.toString());
+            response.headers.set("X-RateLimit-Reset", result.reset.toString());
+
+            if (!result.success) {
+                // Calculate retry-after in seconds
+                const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
+
+                return new NextResponse(
+                    JSON.stringify({
+                        success: false,
+                        error: "Çok fazla istek gönderildi. Lütfen bir dakika bekleyin.",
+                        code: "RATE_LIMIT_EXCEEDED",
+                        retryAfter
+                    }),
+                    {
+                        status: 429,
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Retry-After": retryAfter.toString(),
+                            "X-RateLimit-Limit": result.limit.toString(),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": result.reset.toString()
+                        }
+                    }
+                );
+            }
+        }
+
+        // =====================
+        // 2. CSP (Content Security Policy)
+        // =====================
         const cspHeader = `
             default-src 'self';
             script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-scripts.com;
@@ -24,7 +67,9 @@ export default withAuth(
 
         response.headers.set('Content-Security-Policy', cspHeader);
 
-        // Security Headers
+        // =====================
+        // 3. Security Headers
+        // =====================
         response.headers.set('X-Content-Type-Options', 'nosniff');
         response.headers.set('X-Frame-Options', 'DENY');
         response.headers.set('X-XSS-Protection', '1; mode=block');
@@ -35,11 +80,6 @@ export default withAuth(
 
         // Permissions-Policy - Disable unnecessary browser features
         response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
-
-        // 2. Rate Limiting
-        // Note: Edge Middleware requires external storage (Redis/KV) for effective rate limiting.
-        // Current architecture does not support in-memory state sharing across edge nodes.
-        // We are skipping implementation to avoid false positives or deployment issues.
 
         return response;
     },
