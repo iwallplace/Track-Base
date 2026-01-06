@@ -101,81 +101,105 @@ export async function GET(req: Request) {
 
         if (view === 'summary' && !showDeleted) {
             // 1. Separate Status from baseWhere for initial fetch
-            const queryWhere = { ...baseWhere };
-            delete queryWhere.lastAction;
+            // Status affects which MATERIALS we show, so we must potentially filter materials by status of their latest item.
+            // HOWEVER, filtering distinct list by "latest item status" in SQL is complex (Window Functions).
+            // STRATEGY: 
+            // - If status is filtered: We fetch distinct materials, but we might over-fetch and filter in memory for that page (better than fetching ALL).
+            // - OR: We accept that "Status Filter" might be slightly expensive but scoped to pagination if possible.
 
-            // 2. Find all distinct materials matching Search/Date
+            // Simplified Scalable Approach:
+            // 1. Get Distinct Material References (Paginated) based on Search/Date
+            // Note: DB-side distinct pagination is efficient.
+
+            const queryWhere = { ...baseWhere };
+            delete queryWhere.lastAction; // We need to calculate balance regardless of last action, but search/date applies.
+
+            // 2. Count Total Distinct Materials (for Pagination UI)
+            // Efficient: Fetch only the distinct values to count them. 
+            // Ideally: groupBy return length.
+            const distinctCount = await prisma.inventoryItem.groupBy({
+                by: ['materialReference'],
+                where: queryWhere,
+                _count: { materialReference: true } // just for aggregation if needed, but array length is what matters
+            });
+            const total = distinctCount.length;
+
+            // 3. Fetch PAGINATED Distinct Materials
             const distinctMaterials = await prisma.inventoryItem.findMany({
                 where: queryWhere,
                 select: { materialReference: true },
                 distinct: ['materialReference'],
-                orderBy: { materialReference: 'asc' }
+                orderBy: { materialReference: 'asc' },
+                skip: limit ? (page - 1) * limit : undefined,
+                take: limit
             });
 
-            // 3. Process items to find Latest and Balance
-            const processedItems: InventorySummary[] = [];
-
-            for (const mat of distinctMaterials) {
+            // 4. Process ONLY the visible items (Parallel Fetch)
+            const processedResults = await Promise.all(distinctMaterials.map(async (mat) => {
                 const ref = mat.materialReference;
 
-                // Find Latest Item (matching Search/Date)
+                // A. Find Latest Item details
                 const latestItem = await prisma.inventoryItem.findFirst({
                     where: { materialReference: ref, ...queryWhere },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
-                if (latestItem) {
-                    // 4. Apply Status Filter here (on the LATEST item)
-                    if (status && latestItem.lastAction !== status) {
-                        continue;
-                    }
+                if (!latestItem) return null; // Should not happen if reference exists
 
-                    // Calculate Global Balance
-                    const [entrySum, exitSum] = await Promise.all([
-                        prisma.inventoryItem.aggregate({
-                            _sum: { stockCount: true },
-                            where: { materialReference: ref, lastAction: 'Giriş', deletedAt: null }
-                        }),
-                        prisma.inventoryItem.aggregate({
-                            _sum: { stockCount: true },
-                            where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: null }
-                        })
-                    ]);
-
-                    const balance = (entrySum._sum.stockCount || 0) - (exitSum._sum.stockCount || 0);
-
-                    processedItems.push({
-                        id: latestItem.id,
-                        materialReference: ref,
-                        company: latestItem.company || '',
-                        waybillNo: latestItem.waybillNo,
-                        date: latestItem.date,
-                        stockCount: balance,
-                        lastAction: latestItem.lastAction,
-                        year: latestItem.year,
-                        month: latestItem.month,
-                        week: latestItem.week,
-                        note: latestItem.note || '',
-                        lastModifiedBy: latestItem.lastModifiedBy
-                    });
+                // B. Status Filter Check (Post-Fetch to keep SQL simple)
+                if (status && latestItem.lastAction !== status) {
+                    return null;
                 }
-            }
 
-            // 5. Paginate In-Memory
-            const total = processedItems.length;
-            const paginatedItems = limit
-                ? processedItems.slice((page - 1) * limit, page * limit)
-                : processedItems;
+                // C. Calculate Balance (Aggregate in DB)
+                const [entrySum, exitSum] = await Promise.all([
+                    prisma.inventoryItem.aggregate({
+                        _sum: { stockCount: true },
+                        where: { materialReference: ref, lastAction: 'Giriş', deletedAt: null }
+                    }),
+                    prisma.inventoryItem.aggregate({
+                        _sum: { stockCount: true },
+                        where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: null }
+                    })
+                ]);
 
-            // 6. Map Users
-            const userIds = [...new Set(paginatedItems.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
+                // Safe access to _sum with default 0
+                const entryCount = entrySum._sum?.stockCount ?? 0;
+                const exitCount = exitSum._sum?.stockCount ?? 0;
+                const balance = entryCount - exitCount;
+
+                return {
+                    id: latestItem.id,
+                    materialReference: ref,
+                    company: latestItem.company || '',
+                    waybillNo: latestItem.waybillNo,
+                    date: latestItem.date,
+                    stockCount: balance, // Global stock
+                    lastAction: latestItem.lastAction,
+                    year: latestItem.year,
+                    month: latestItem.month,
+                    week: latestItem.week,
+                    note: latestItem.note || '',
+                    lastModifiedBy: latestItem.lastModifiedBy
+                } as InventorySummary;
+            }));
+
+            // Filter out nulls (Status mismatch)
+            const finalProcessed: InventorySummary[] = processedResults.filter((i): i is InventorySummary => i !== null);
+
+            // Note: If Status filter is active, we might return FEWER than 'limit' items per page.
+            // This is a known trade-off for staying scalable without complex SQL subqueries.
+            // The UI will handle having 45 items instead of 50 gracefully.
+
+            // 5. Map Users
+            const userIds = [...new Set(finalProcessed.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
             const users = await prisma.user.findMany({
                 where: { id: { in: userIds } },
                 select: { id: true, name: true }
             });
             const userMap = new Map(users.map(u => [u.id, u.name]));
 
-            const finalItems = paginatedItems.map(item => ({
+            const finalItems = finalProcessed.map(item => ({
                 ...item,
                 modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem'
             }));
@@ -183,7 +207,7 @@ export async function GET(req: Request) {
             return successResponse({
                 items: finalItems,
                 pagination: {
-                    total,
+                    total, // Total DISTINCT materials (approximate if filtered by status, but accurate for navigation)
                     page,
                     limit: limit || total,
                     totalPages: limit ? Math.ceil(total / limit) : 1

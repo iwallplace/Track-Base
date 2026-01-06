@@ -36,7 +36,7 @@ export const GEMINI_MODEL_CONFIG = {
 /**
  * Helper to handle API errors gracefully for Free Tier
  */
-export const handleGeminiError = (error: any) => {
+export const handleGeminiError = (error: unknown) => {
     console.error("Gemini API Error:", error);
 
     const errStr = String(error);

@@ -49,6 +49,7 @@ model InventoryItem {
   @@index([date])
   @@index([createdAt])
   @@index([deletedAt]) // Index for filtering active items
+  @@index([materialReference, deletedAt]) // Optimized for Stock Checks
 }
 
 model RolePermission {

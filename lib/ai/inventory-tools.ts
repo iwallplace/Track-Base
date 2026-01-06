@@ -43,7 +43,7 @@ export const INVENTORY_TOOLS = {
 };
 
 // Actual Function Implementations
-export const runInventoryTool = async (name: string, args: any) => {
+export const runInventoryTool = async (name: string, args: Record<string, any>) => {
     console.log(`🛠️ Running Tool: ${name}`, args);
 
     switch (name) {

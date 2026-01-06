@@ -71,9 +71,13 @@ export async function POST(req: Request) {
         const { name, username, password, role } = validation.data;
 
         // Check if username already exists
-        const existing = await prisma.user.findUnique({ where: { username } });
         if (existing) {
             return errorResponse("Bu kullanıcı adı zaten kullanılıyor", 409);
+        }
+
+        // SECURITY: Non-admins can ONLY create 'USER' role
+        if (session.user.role !== 'ADMIN' && role !== 'USER') {
+            return forbiddenResponse("Sadece 'USER' rolünde kullanıcı oluşturabilirsiniz");
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
