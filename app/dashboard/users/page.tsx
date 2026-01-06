@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
+import DeleteConfirmModal from '@/components/delete-confirm-modal';
 import { useToast } from '@/components/toast';
+import { useLanguage } from '@/components/language-provider';
 
 interface User {
     id: string;
@@ -31,6 +33,7 @@ const ROLE_COLORS: Record<string, string> = {
 export default function UsersPage() {
     const { data: session } = useSession();
     const { showToast } = useToast();
+    const { t } = useLanguage();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'USER' });
@@ -39,6 +42,7 @@ export default function UsersPage() {
     // Modal State
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, userId: null as string | null });
 
     // Dynamic permissions state
     const [permissionsData, setPermissionsData] = useState<PermissionsData | null>(null);
@@ -68,7 +72,7 @@ export default function UsersPage() {
             }
         } catch (error) {
             console.error('Failed to fetch permissions', error);
-            showToast('Yetkiler yüklenirken hata oluştu', 'error');
+            showToast(t('error_permissions'), 'error');
         } finally {
             setPermLoading(false);
         }
@@ -95,33 +99,34 @@ export default function UsersPage() {
             if (res.ok) {
                 setNewUser({ name: '', username: '', password: '', role: 'USER' });
                 fetchUsers();
-                showToast('Kullanıcı başarıyla eklendi', 'success');
+                showToast(t('user_added'), 'success');
             } else {
-                showToast(data.error || "Kullanıcı eklenirken hata oluştu", 'error');
+                showToast(data.error || t('error_user_add'), 'error');
             }
         } catch (error) {
-            showToast('Sunucu hatası', 'error');
+            showToast(t('conn_error'), 'error');
         }
     };
 
-    const handleDeleteUser = async (id: string) => {
-        // We can create a confirmation modal component later, effectively replacing confirm() too if needed.
-        // For now user asked for alert replacements. confirm() is native but blocking.
-        // I will keep confirm() as it is standard behavior unless explicitly asked to replace confirms with custom modals.
-        // The user said "remove all alerts", not "remove all dialogs".
-        if (!confirm("Emin misiniz?")) return;
+    const handleDeleteUser = (id: string) => {
+        setDeleteModal({ isOpen: true, userId: id });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteModal.userId) return;
 
         try {
-            const res = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/users?id=${deleteModal.userId}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchUsers();
-                showToast('Kullanıcı silindi', 'success');
+                showToast(t('user_deleted'), 'success');
+                setDeleteModal({ isOpen: false, userId: null });
             } else {
                 const data = await res.json();
-                showToast(data.error || 'Silme işlemi başarısız', 'error');
+                showToast(data.error || t('error_delete'), 'error');
             }
         } catch (error) {
-            showToast('Silme işlemi sırasında hata', 'error');
+            showToast(t('error_generic'), 'error');
         }
     };
 
@@ -151,14 +156,14 @@ export default function UsersPage() {
                         }
                     };
                 });
-                showToast('Yetki güncellendi', 'success');
+                showToast(t('permission_updated'), 'success');
             } else {
                 const data = await res.json();
-                showToast(data.error || 'Güncelleme başarısız', 'error');
+                showToast(data.error || t('error_update'), 'error');
             }
         } catch (error) {
             console.error('Permission update error:', error);
-            showToast('Bağlantı hatası', 'error');
+            showToast(t('conn_error'), 'error');
         } finally {
             setUpdatingPerm(null);
         }
@@ -184,9 +189,17 @@ export default function UsersPage() {
                 user={editingUser}
             />
 
+            <DeleteConfirmModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, userId: null })}
+                onConfirm={handleConfirmDelete}
+                title={t('confirm_delete')}
+                description={t('confirm_delete_message')}
+            />
+
             <div>
-                <h2 className="text-2xl font-bold text-foreground">Kullanıcı Yönetimi</h2>
-                <p className="text-muted-foreground">Sisteme erişimi olan kullanıcıları görüntüleyin ve yönetin.</p>
+                <h2 className="text-2xl font-bold text-foreground">{t('user_management_title')}</h2>
+                <p className="text-muted-foreground">{t('user_management_desc')}</p>
             </div>
 
             {/* Role Permissions Panel - ADMIN Only */}
@@ -199,8 +212,8 @@ export default function UsersPage() {
                         <div className="flex items-center gap-3">
                             <Key className="h-5 w-5 text-purple-500" />
                             <div className="text-left">
-                                <h3 className="text-lg font-medium text-foreground">Rol Yetkileri</h3>
-                                <p className="text-sm text-muted-foreground">Her rolün sistem içindeki yetkilerini düzenleyin</p>
+                                <h3 className="text-lg font-medium text-foreground">{t('role_permissions')}</h3>
+                                <p className="text-sm text-muted-foreground">{t('role_permissions_desc')}</p>
                             </div>
                         </div>
                         {showRolePanel ? (
@@ -215,7 +228,7 @@ export default function UsersPage() {
                             {permLoading ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                    <span className="ml-2 text-muted-foreground">Yetkiler yükleniyor...</span>
+                                    <span className="ml-2 text-muted-foreground">{t('permissions_loading')}</span>
                                 </div>
                             ) : permissionsData ? (
                                 <>
@@ -223,7 +236,7 @@ export default function UsersPage() {
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="text-left">
-                                                    <th className="pb-4 pr-4 font-medium text-muted-foreground">Yetki</th>
+                                                    <th className="pb-4 pr-4 font-medium text-muted-foreground">{t('permission_col')}</th>
                                                     {Object.keys(ROLE_COLORS).map((role) => (
                                                         <th key={role} className="pb-4 px-4 text-center font-medium">
                                                             <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs border ${getRoleColorClasses(ROLE_COLORS[role])}`}>
@@ -251,7 +264,7 @@ export default function UsersPage() {
                                                                             ${granted ? 'bg-emerald-600' : 'bg-muted-foreground'}
                                                                             ${isProtected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}
                                                                         `}
-                                                                        title={isProtected ? 'Project Owner yetkileri değiştirilemez' : undefined}
+                                                                        title={isProtected ? t('cannot_remove_admin') : undefined}
                                                                     >
                                                                         {isUpdating ? (
                                                                             <Loader2 className="h-4 w-4 animate-spin text-white mx-auto" />
@@ -270,12 +283,12 @@ export default function UsersPage() {
                                     <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
                                         <p className="text-xs text-muted-foreground">
                                             <ShieldAlert className="h-3 w-3 inline mr-1" />
-                                            Değişiklikler anında uygulanır. Project Owner yetkileri değiştirilemez.
+                                            {t('permission_note')}
                                         </p>
                                     </div>
                                 </>
                             ) : (
-                                <div className="text-center py-8 text-muted-foreground">Yetkiler yüklenemedi</div>
+                                <div className="text-center py-8 text-muted-foreground">{t('error_permissions')}</div>
                             )}
                         </div>
                     )}
@@ -287,11 +300,11 @@ export default function UsersPage() {
                 <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
                         <UserPlus className="h-5 w-5 text-blue-500" />
-                        Yeni Kullanıcı Ekle
+                        {t('add_user')}
                     </h3>
                     <form onSubmit={handleAddUser} className="grid md:grid-cols-5 gap-4 items-end">
                         <div className="md:col-span-1">
-                            <label className="block text-xs text-muted-foreground mb-1">Ad Soyad</label>
+                            <label className="block text-xs text-muted-foreground mb-1">{t('name_surname')}</label>
                             <input
                                 required
                                 value={newUser.name}
@@ -300,7 +313,7 @@ export default function UsersPage() {
                             />
                         </div>
                         <div className="md:col-span-1">
-                            <label className="block text-xs text-muted-foreground mb-1">E-posta / Kullanıcı Adı</label>
+                            <label className="block text-xs text-muted-foreground mb-1">{t('username_email')}</label>
                             <input
                                 required
                                 value={newUser.username}
@@ -309,7 +322,7 @@ export default function UsersPage() {
                             />
                         </div>
                         <div className="md:col-span-1">
-                            <label className="block text-xs text-muted-foreground mb-1">Şifre</label>
+                            <label className="block text-xs text-muted-foreground mb-1">{t('password')}</label>
                             <input
                                 required
                                 type="password"
@@ -319,20 +332,20 @@ export default function UsersPage() {
                             />
                         </div>
                         <div className="md:col-span-1">
-                            <label className="block text-xs text-muted-foreground mb-1">Rol</label>
+                            <label className="block text-xs text-muted-foreground mb-1">{t('role')}</label>
                             <select
                                 value={newUser.role}
                                 onChange={e => setNewUser({ ...newUser, role: e.target.value })}
                                 className="w-full rounded bg-background border border-input px-3 py-2 text-foreground text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             >
-                                <option value="USER">İnci Personeli</option>
-                                <option value="IME">IME</option>
-                                <option value="KALITE">Kalite</option>
-                                <option value="ADMIN">Project Owner</option>
+                                <option value="USER">{t('role_select_user')}</option>
+                                <option value="IME">{t('role_select_ime')}</option>
+                                <option value="KALITE">{t('role_select_quality')}</option>
+                                <option value="ADMIN">{t('role_select_admin')}</option>
                             </select>
                         </div>
                         <button className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 text-sm font-medium transition-colors">
-                            Ekle
+                            {t('add')}
                         </button>
                     </form>
                 </div>
@@ -343,10 +356,10 @@ export default function UsersPage() {
                 <table className="w-full text-left text-sm">
                     <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
                         <tr>
-                            <th className="px-6 py-4">Kullanıcı</th>
-                            <th className="px-6 py-4">Rol</th>
-                            <th className="px-6 py-4">Kayıt Tarihi</th>
-                            {canManageUsers && <th className="px-6 py-4 text-right">İşlem</th>}
+                            <th className="px-6 py-4">{t('table_user')}</th>
+                            <th className="px-6 py-4">{t('table_role')}</th>
+                            <th className="px-6 py-4">{t('table_date')}</th>
+                            {canManageUsers && <th className="px-6 py-4 text-right">{t('table_action')}</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -364,19 +377,19 @@ export default function UsersPage() {
                                     <td className="px-6 py-4">
                                         {user.role === 'ADMIN' ? (
                                             <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 px-2 py-1 text-xs text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                                                <Shield className="h-3 w-3" /> Project Owner
+                                                <Shield className="h-3 w-3" /> {t('role_admin')}
                                             </span>
                                         ) : user.role === 'IME' ? (
                                             <span className="inline-flex items-center rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                IME
+                                                {t('role_ime')}
                                             </span>
                                         ) : user.role === 'KALITE' ? (
                                             <span className="inline-flex items-center rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                                Kalite
+                                                {t('role_quality')}
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
-                                                İnci Personeli
+                                                {t('role_user')}
                                             </span>
                                         )}
                                     </td>

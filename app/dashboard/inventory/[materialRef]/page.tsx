@@ -20,6 +20,7 @@ interface InventoryItem {
     stockCount: number;
     lastAction: string;
     note: string;
+    createdAt: string;
     modifierName?: string;
 }
 
@@ -196,6 +197,8 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Calendar className="h-4 w-4" />
                                             <span>{new Date(item.date).toLocaleDateString("tr-TR")}</span>
+                                            <span className="text-muted-foreground">•</span>
+                                            <span>{new Date(item.createdAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}</span>
                                             <span className="text-muted-foreground">•</span>
                                             <span>{item.year} / {item.month}. {t('month')} / {item.week}. {t('week')}</span>
                                         </div>

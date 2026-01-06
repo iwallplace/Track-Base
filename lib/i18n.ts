@@ -8,6 +8,48 @@ export const translations = {
         users: 'Kullanıcılar',
         settings: 'Ayarlar',
 
+        // User Management
+        user_management_title: 'Kullanıcı Yönetimi',
+        user_management_desc: 'Sisteme erişimi olan kullanıcıları görüntüleyin ve yönetin.',
+        add_user: 'Yeni Kullanıcı Ekle',
+        role_permissions: 'Rol Yetkileri',
+        role_permissions_desc: 'Her rolün sistem içindeki yetkilerini düzenleyin',
+        permissions_loading: 'Yetkiler yükleniyor...',
+        error_permissions: 'Yetkiler yüklenirken hata oluştu',
+        user_added: 'Kullanıcı başarıyla eklendi',
+        error_user_add: 'Kullanıcı eklenirken hata oluştu',
+        user_deleted: 'Kullanıcı silindi',
+        error_delete: 'Silme işlemi başarısız',
+        error_generic: 'İşlem sırasında hata',
+        permission_updated: 'Yetki güncellendi',
+        error_update: 'Güncelleme başarısız',
+        conn_error: 'Bağlantı hatası',
+        permission_col: 'Yetki',
+        permission_note: 'Değişiklikler anında uygulanır. Project Owner yetkileri değiştirilemez.',
+        cannot_remove_admin: 'Project Owner yetkileri değiştirilemez',
+
+        // Forms
+        name_surname: 'Ad Soyad',
+        username_email: 'E-posta / Kullanıcı Adı',
+        password: 'Şifre',
+        role: 'Rol',
+        role_select_user: 'İnci Personeli',
+        role_select_ime: 'IME',
+        role_select_quality: 'Kalite',
+        role_select_admin: 'Project Owner',
+
+        // Table
+        table_user: 'Kullanıcı',
+        table_role: 'Rol',
+        table_date: 'Kayıt Tarihi',
+        table_action: 'İşlem',
+
+        // Edit Modal
+        edit_user_title: 'Kullanıcı Düzenle',
+        new_password: 'Yeni Şifre',
+        password_hint: '(Değiştirmek istemiyorsanız boş bırakın)',
+        user_updated: 'Kullanıcı güncellendi',
+
         // Roles
         role_admin: 'Project Owner',
         role_user: 'İnci Personeli',
@@ -86,6 +128,48 @@ export const translations = {
         inventory: 'Stock Tracking',
         users: 'Users',
         settings: 'Settings',
+
+        // User Management
+        user_management_title: 'User Management',
+        user_management_desc: 'View and manage users with system access.',
+        add_user: 'Add New User',
+        role_permissions: 'Role Permissions',
+        role_permissions_desc: 'Manage system permissions for each role',
+        permissions_loading: 'Loading permissions...',
+        error_permissions: 'Error loading permissions',
+        user_added: 'User successfully added',
+        error_user_add: 'Error adding user',
+        user_deleted: 'User deleted',
+        error_delete: 'Delete failed',
+        error_generic: 'Error during operation',
+        permission_updated: 'Permission updated',
+        error_update: 'Update failed',
+        conn_error: 'Connection error',
+        permission_col: 'Permission',
+        permission_note: 'Changes apply immediately. Project Owner permissions cannot be changed.',
+        cannot_remove_admin: 'Project Owner permissions cannot be changed',
+
+        // Forms
+        name_surname: 'Name Surname',
+        username_email: 'Email / Username',
+        password: 'Password',
+        role: 'Role',
+        role_select_user: 'Staff',
+        role_select_ime: 'IME',
+        role_select_quality: 'Quality',
+        role_select_admin: 'Project Owner',
+
+        // Table
+        table_user: 'User',
+        table_role: 'Role',
+        table_date: 'Registration Date',
+        table_action: 'Actions',
+
+        // Edit Modal
+        edit_user_title: 'Edit User',
+        new_password: 'New Password',
+        password_hint: '(Leave blank to keep current)',
+        user_updated: 'User updated',
 
         // Roles
         role_admin: 'Project Owner',

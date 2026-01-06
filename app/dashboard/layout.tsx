@@ -24,14 +24,14 @@ export default function DashboardLayoutContent({
     const navigation = [
         { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
         { name: t('inventory'), href: '/dashboard/inventory', icon: Package },
-        { name: t('users'), href: '/dashboard/companies', icon: Users },
+        { name: t('users'), href: '/dashboard/users', icon: Users },
         { name: t('settings'), href: '/dashboard/settings', icon: Settings },
     ];
 
     const getPageTitle = (pathname: string) => {
         if (pathname === '/dashboard') return t('dashboard');
         if (pathname.includes('/inventory')) return t('inventory_title');
-        if (pathname.includes('/companies')) return t('users');
+        if (pathname.includes('/users')) return t('users');
         if (pathname.includes('/settings')) return t('settings');
         return t('dashboard');
     };

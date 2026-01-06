@@ -2,12 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
 import DateRangePicker from '@/components/date-range-picker';
 import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
+import { useSession } from 'next-auth/react';
+import DeleteConfirmModal from '@/components/delete-confirm-modal';
 
 interface InventoryItem {
     id: string; // Latest Item ID
@@ -44,6 +46,9 @@ export default function DashboardPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'Giriş' | 'Çıkış'>('Giriş');
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+    const { data: session } = useSession();
+    const [canDelete, setCanDelete] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
 
     const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -98,6 +103,54 @@ export default function DashboardPage() {
     useEffect(() => {
         fetchItems();
     }, [currentPage, pageSize, searchTerm, statusFilter, dateRange]);
+
+    useEffect(() => {
+        const checkPermission = async () => {
+            if (session?.user?.role) {
+                // If ADMIN, check if protected or if DB has granted it.
+                // However, fetching /api/permissions gives us the full map.
+                try {
+                    const res = await fetch('/api/permissions');
+                    if (res.ok) {
+                        const data = await res.json();
+                        const role = session.user.role;
+                        // Check if role has inventory.delete
+                        // Note: The API returns { permissions: { ROLE: { perm: bool } } }
+                        const hasPerm = data.data.permissions[role]?.['inventory.delete'];
+                        // Also ADMIN fallback if needed, but our API should return correct map now
+                        setCanDelete(!!hasPerm || (role === 'ADMIN' && true)); // Fallback true for ADMIN until DB is populated? No, rely on API.
+                        // Actually, let's trust the API.
+                        setCanDelete(!!hasPerm);
+                    }
+                } catch (e) {
+                    console.error('Permission check failed', e);
+                }
+            }
+        };
+        checkPermission();
+    }, [session]);
+
+    const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation(); // Prevent row click
+        setDeleteModal({ isOpen: true, itemId: id });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteModal.itemId) return;
+        try {
+            const res = await fetch(`/api/inventory?id=${deleteModal.itemId}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast(t('success'), 'success');
+                setDeleteModal({ isOpen: false, itemId: null });
+                fetchItems();
+            } else {
+                showToast(t('error'), 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast(t('error'), 'error');
+        }
+    };
 
     const handleExport = async () => {
         try {
@@ -313,6 +366,7 @@ export default function DashboardPage() {
                                 <th className="px-6 py-4 font-medium text-right text-blue-600">{t('col_stock')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_last_action')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_note')}</th>
+                                {canDelete && <th className="px-6 py-4 font-medium w-10"></th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -362,6 +416,17 @@ export default function DashboardPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">{item.note}</td>
+                                    {canDelete && (
+                                        <td className="px-6 py-4 text-right">
+                                            <button
+                                                onClick={(e) => handleDeleteClick(e, item.id)}
+                                                className="text-muted-foreground hover:text-red-500 transition-colors p-1"
+                                                title={t('delete')}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    )}
                                 </motion.tr>
                             ))}
                         </tbody>
@@ -395,6 +460,12 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <DeleteConfirmModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, itemId: null })}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }

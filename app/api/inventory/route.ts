@@ -11,6 +11,7 @@ import {
     internalErrorResponse,
     devError
 } from "@/lib/api-response";
+import { hasPermission } from "@/lib/permissions";
 
 interface InventorySummary {
     id: string;
@@ -102,7 +103,7 @@ export async function GET(req: Request) {
                 // Find Latest Item (matching Search/Date)
                 const latestItem = await prisma.inventoryItem.findFirst({
                     where: { materialReference: ref, ...queryWhere },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
                 if (latestItem) {
@@ -224,10 +225,11 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         // Check Permissions (Fortress Level)
-        const ALLOWED_ROLES = ['ADMIN', 'IME', 'KALITE'];
-        if (!session.user.role || !ALLOWED_ROLES.includes(session.user.role)) {
+        // Check Permissions (Fortress Level)
+        const hasCreatePermission = await hasPermission(session.user.role || "USER", 'inventory.create');
+        if (!hasCreatePermission) {
             console.warn(`[SECURITY] Unauthorized inventory creation attempt by user: ${session.user.id} (${session.user.role})`);
-            return forbiddenResponse("Bu işlem için yetkiniz yok (Gerekli: ADMIN, IME veya KALITE)");
+            return forbiddenResponse("Bu işlem için yetkiniz yok (Envanter kaydı ekleme)");
         }
 
         // Zod validation handles uppercase transformation automatically now
@@ -323,8 +325,11 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== 'ADMIN') {
-        return forbiddenResponse("Sadece Project Owner silme işlemi yapabilir");
+    if (!session) return unauthorizedResponse();
+
+    const hasDeletePermission = await hasPermission(session.user.role || "USER", 'inventory.delete');
+    if (!hasDeletePermission) {
+        return forbiddenResponse("Bu işlem için yetkiniz yok (Envanter kaydı silme)");
     }
 
     try {

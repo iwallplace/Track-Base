@@ -9,8 +9,9 @@ const CACHE_TTL = 60000; // 1 minute cache
  * Check if a role has a specific permission
  */
 export async function hasPermission(role: string, permission: string): Promise<boolean> {
-    // ADMIN always has all permissions (fallback safety)
-    if (role === 'ADMIN') return true;
+    // Protected permissions that ADMIN always has
+    const PROTECTED = ['data.view', 'users.role.change', 'settings.edit'];
+    if (role === 'ADMIN' && PROTECTED.includes(permission)) return true;
 
     try {
         // Check cache first
