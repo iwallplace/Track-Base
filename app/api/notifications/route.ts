@@ -48,7 +48,7 @@ export async function GET() {
             title: 'Kritik Stok Seviyesi',
             message: `${item.materialReference} referanslı ürün stoğu ${item.stockCount} adete düştü.`,
             meta: { company: item.company },
-            link: `/dashboard/inventory/${item.id}`,
+            link: `/dashboard/inventory/${item.materialReference}?highlight=${item.id}`,
             date: item.updatedAt
         }));
 
@@ -68,7 +68,7 @@ export async function GET() {
                 title: 'Yeni Kullanıcı Katıldı',
                 message: `${user.name} (${user.role}) sisteme eklendi.`,
                 meta: { role: user.role },
-                link: '/dashboard/companies',
+                link: '/dashboard/users',
                 date: user.createdAt
             }));
 
