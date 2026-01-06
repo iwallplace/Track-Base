@@ -16,45 +16,54 @@ export default withAuth(
                 || req.headers.get("x-real-ip")
                 || "anonymous";
 
-            const result = await rateLimit(ip, req.nextUrl.pathname);
+            try {
+                const result = await rateLimit(ip, req.nextUrl.pathname);
 
-            // Add rate limit headers to response
-            response.headers.set("X-RateLimit-Limit", result.limit.toString());
-            response.headers.set("X-RateLimit-Remaining", result.remaining.toString());
-            response.headers.set("X-RateLimit-Reset", result.reset.toString());
+                // Add rate limit headers to response
+                response.headers.set("X-RateLimit-Limit", result.limit.toString());
+                response.headers.set("X-RateLimit-Remaining", result.remaining.toString());
+                response.headers.set("X-RateLimit-Reset", result.reset.toString());
 
-            if (!result.success) {
-                // Calculate retry-after in seconds
-                const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
+                if (!result.success) {
+                    // Calculate retry-after in seconds
+                    const retryAfter = Math.ceil((result.reset - Date.now()) / 1000);
 
-                return new NextResponse(
-                    JSON.stringify({
-                        success: false,
-                        error: "Çok fazla istek gönderildi. Lütfen bir dakika bekleyin.",
-                        code: "RATE_LIMIT_EXCEEDED",
-                        retryAfter
-                    }),
-                    {
-                        status: 429,
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Retry-After": retryAfter.toString(),
-                            "X-RateLimit-Limit": result.limit.toString(),
-                            "X-RateLimit-Remaining": "0",
-                            "X-RateLimit-Reset": result.reset.toString()
+                    return new NextResponse(
+                        JSON.stringify({
+                            success: false,
+                            error: "Çok fazla istek gönderildi. Lütfen bir dakika bekleyin.",
+                            code: "RATE_LIMIT_EXCEEDED",
+                            retryAfter
+                        }),
+                        {
+                            status: 429,
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Retry-After": retryAfter.toString(),
+                                "X-RateLimit-Limit": result.limit.toString(),
+                                "X-RateLimit-Remaining": "0",
+                                "X-RateLimit-Reset": result.reset.toString()
+                            }
                         }
-                    }
-                );
+                    );
+                }
+            } catch (err) {
+                // Fail open but log error
+                console.error("[MIDDLEWARE_RATE_LIMIT_ERROR]", err);
             }
         }
 
         // =====================
         // 2. CSP (Content Security Policy)
         // =====================
+
+        // Generate a random nonce for this request
+        const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+
         const cspHeader = `
             default-src 'self';
-            script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-scripts.com;
-            style-src 'self' 'unsafe-inline';
+            script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https:;
+            style-src 'self' 'nonce-${nonce}';
             img-src 'self' data: blob: https:;
             font-src 'self';
             object-src 'none';
@@ -65,7 +74,16 @@ export default withAuth(
             upgrade-insecure-requests;
         `.replace(/\s{2,}/g, ' ').trim();
 
+        // Pass the nonce to the response/request headers so it can be used by the app
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set('x-nonce', nonce);
+        requestHeaders.set('Content-Security-Policy', cspHeader);
+
         response.headers.set('Content-Security-Policy', cspHeader);
+        response.headers.set('X-Nonce', nonce);
+
+        // Return response with updated headers
+        // Note: For nonce to work with Next.js <Script>, we mainly need it in the header
 
         // =====================
         // 3. Security Headers

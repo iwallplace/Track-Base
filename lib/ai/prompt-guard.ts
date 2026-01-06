@@ -9,6 +9,8 @@ const BLOCKED_PATTERNS: RegExp[] = [
     /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?|context)/i,
     /forget\s+(everything|all|your)\s+(instructions?|rules?|prompts?)/i,
     /disregard\s+(all\s+)?(previous|prior|your)\s+(instructions?|rules?)/i,
+    /system\s+update/i,
+    /security\s+override/i,
 
     // Role/identity manipulation
     /you\s+are\s+(now|actually|really)\s+(a|an|the)/i,
@@ -16,23 +18,43 @@ const BLOCKED_PATTERNS: RegExp[] = [
     /act\s+as\s+(if|though|a|an)/i,
     /from\s+now\s+on\s+you\s+(are|will|should)/i,
     /new\s+persona/i,
+    /roleplay/i,
+    /simulate/i,
 
     // System prompt extraction attempts
     /what\s+(are|is)\s+your\s+(system\s+)?(prompt|instructions?|rules?)/i,
     /show\s+me\s+your\s+(system\s+)?(prompt|instructions?)/i,
     /reveal\s+your\s+(system\s+)?(prompt|instructions?)/i,
     /repeat\s+(your\s+)?(system\s+)?(prompt|instructions?)/i,
+    /initial\s+prompt/i,
 
     // Developer mode / jailbreak attempts
     /developer\s+mode/i,
     /jailbreak/i,
-    /DAN\s+mode/i,
+    /DAN(\s+mode)?/i, // Catch "DAN" or "DAN mode"
     /bypass\s+(your\s+)?(safety|security|filters?)/i,
+    /god\s+mode/i,
+    /unfiltered/i,
+    /uncensored/i,
+
+    // Hypothetical / Logical wrapping
+    /hypothetically/i,
+    /in\s+a\s+movie/i,
+    /for\s+educational\s+purpose/i,
+    /write\s+a\s+story/i,
+
+    // Emotional manipulation / Social Engineering
+    /grandmother\s+is\s+(dying|dead|scared)/i,
+    /please\s+help\s+me/i,
+    /life\s+or\s+death/i,
+    /emergency/i,
 
     // Data exfiltration attempts
     /dump\s+(all|the)\s+(data|database|users?|records?)/i,
     /list\s+all\s+(users?|passwords?|secrets?)/i,
     /export\s+(all|the)\s+(data|records?)/i,
+    /select\s+\*\s+from/i, // SQL injection hint check
+    /union\s+select/i,
 ];
 
 // Suspicious keywords that warrant extra scrutiny
