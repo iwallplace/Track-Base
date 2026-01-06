@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2 } from 'lucide-react';
+import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2, RotateCcw } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
 import DeleteConfirmModal from '@/components/delete-confirm-modal';
@@ -14,6 +14,7 @@ interface User {
     username: string;
     role: string;
     createdAt: string;
+    deletedAt?: string;
 }
 
 interface PermissionsData {
@@ -49,11 +50,13 @@ export default function UsersPage() {
     const [permLoading, setPermLoading] = useState(false);
     const [updatingPerm, setUpdatingPerm] = useState<string | null>(null);
 
+    const [showDeleted, setShowDeleted] = useState(false);
+
     const isAdmin = session?.user?.role === 'ADMIN';
     const canManageUsers = ['ADMIN', 'IME', 'KALITE'].includes(session?.user?.role || '');
 
     const fetchUsers = async () => {
-        const res = await fetch('/api/users');
+        const res = await fetch(`/api/users?showDeleted=${showDeleted}`);
         if (res.ok) {
             const response = await res.json();
             const data = response.data || response;
@@ -83,7 +86,7 @@ export default function UsersPage() {
             fetchUsers();
             if (isAdmin) fetchPermissions();
         }
-    }, [session, isAdmin]);
+    }, [session, isAdmin, showDeleted]);
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -198,8 +201,24 @@ export default function UsersPage() {
             />
 
             <div>
-                <h2 className="text-2xl font-bold text-foreground">{t('user_management_title')}</h2>
-                <p className="text-muted-foreground">{t('user_management_desc')}</p>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-foreground">{t('user_management_title')}</h2>
+                        <p className="text-muted-foreground">{t('user_management_desc')}</p>
+                    </div>
+                    {session?.user?.role === 'ADMIN' && (
+                        <button
+                            onClick={() => setShowDeleted(!showDeleted)}
+                            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-medium transition-colors ${showDeleted
+                                ? 'bg-red-500/10 border-red-500/50 text-red-600'
+                                : 'border-input bg-background text-muted-foreground hover:bg-accent'
+                                }`}
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            {showDeleted ? t('hide_deleted') : t('show_deleted')}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Role Permissions Panel - ADMIN Only */}
@@ -369,54 +388,89 @@ export default function UsersPage() {
                                 : user.role === 'USER';
 
                             return (
-                                <tr key={user.id} className="hover:bg-muted/50 transition-colors">
+                                <tr key={user.id} className={`hover:bg-muted/50 transition-colors ${user.deletedAt ? 'bg-red-500/5 hover:bg-red-500/10' : ''}`}>
                                     <td className="px-6 py-4">
-                                        <div className="font-medium text-foreground">{user.name}</div>
-                                        <div className="text-muted-foreground text-xs">{user.username}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {user.role === 'ADMIN' ? (
-                                            <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 px-2 py-1 text-xs text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                                                <Shield className="h-3 w-3" /> {t('role_admin')}
-                                            </span>
-                                        ) : user.role === 'IME' ? (
-                                            <span className="inline-flex items-center rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                {t('role_ime')}
-                                            </span>
-                                        ) : user.role === 'KALITE' ? (
-                                            <span className="inline-flex items-center rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                                {t('role_quality')}
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
-                                                {t('role_user')}
+                                        <div className={`font-medium text-foreground ${user.deletedAt ? 'opacity-50' : ''}`}>{user.name}</div>
+                                        <div className="text-muted-foreground text-xs text-ellipsis">{user.username}</div>
+                                        {user.deletedAt && (
+                                            <span className="mt-1 inline-flex items-center rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-600 border border-red-500/20">
+                                                {t('deleted')}
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-muted-foreground">
+                                    <td className="px-6 py-4">
+                                        <div className={user.deletedAt ? 'opacity-50' : ''}>
+                                            {user.role === 'ADMIN' ? (
+                                                <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 px-2 py-1 text-xs text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                                    <Shield className="h-3 w-3" /> {t('role_admin')}
+                                                </span>
+                                            ) : user.role === 'IME' ? (
+                                                <span className="inline-flex items-center rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                    {t('role_ime')}
+                                                </span>
+                                            ) : user.role === 'KALITE' ? (
+                                                <span className="inline-flex items-center rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                    {t('role_quality')}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
+                                                    {t('role_user')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className={`px-6 py-4 text-muted-foreground ${user.deletedAt ? 'opacity-50' : ''}`}>
                                         {new Date(user.createdAt).toLocaleDateString()}
                                     </td>
                                     {canManageUsers && (
                                         <td className="px-6 py-4 text-right">
                                             {canAction && (
                                                 <div className="flex justify-end gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingUser(user);
-                                                            setIsEditModalOpen(true);
-                                                        }}
-                                                        className="p-2 text-muted-foreground hover:text-blue-500 transition-colors"
-                                                        title="Düzenle / Şifre Sıfırla"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                        className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
-                                                        title="Kullanıcıyı Sil"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
+                                                    {user.deletedAt ? (
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const res = await fetch('/api/users', {
+                                                                        method: 'PATCH',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({ id: user.id, action: 'restore' })
+                                                                    });
+                                                                    if (res.ok) {
+                                                                        showToast(t('restore_success'), 'success');
+                                                                        fetchUsers();
+                                                                    } else {
+                                                                        showToast(t('restore_failed'), 'error');
+                                                                    }
+                                                                } catch (error) {
+                                                                    showToast(t('error_generic'), 'error');
+                                                                }
+                                                            }}
+                                                            className="p-2 text-muted-foreground hover:text-blue-500 transition-colors"
+                                                            title={t('restore')}
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                        </button>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingUser(user);
+                                                                    setIsEditModalOpen(true);
+                                                                }}
+                                                                className="p-2 text-muted-foreground hover:text-blue-500 transition-colors"
+                                                                title={t('edit')}
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user.id)}
+                                                                className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
+                                                                title={t('delete')}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>

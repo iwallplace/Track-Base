@@ -17,15 +17,32 @@ import { createAuditLog } from "@/lib/audit";
 
 const ALLOWED_ROLES = ['ADMIN', 'IME', 'KALITE'];
 
-export async function GET() {
+export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) {
         return unauthorizedResponse();
     }
 
+    const { searchParams } = new URL(req.url);
+    const showDeleted = searchParams.get('showDeleted') === 'true';
+
     try {
+        const where: any = {};
+
+        // Soft Delete Logic
+        if (showDeleted && session.user.role === 'ADMIN') {
+            // Admin asked for deleted: Show deleted + active? Or just deleted? 
+            // Usually simpler to show ALL or just deleted.
+            // Let's mimic Inventory: if showDeleted=true, show deleted items.
+            where.deletedAt = { not: null };
+        } else {
+            // Default: active only
+            where.deletedAt = null;
+        }
+
         const users = await prisma.user.findMany({
-            select: { id: true, name: true, username: true, role: true, createdAt: true },
+            where,
+            select: { id: true, name: true, username: true, role: true, createdAt: true, deletedAt: true },
             orderBy: { createdAt: 'desc' }
         });
         return successResponse(users);
@@ -111,19 +128,58 @@ export async function DELETE(req: Request) {
             return forbiddenResponse("Project Owner silinemez");
         }
 
-        const deletedUser = await prisma.user.delete({ where: { id } });
+        // SOFT DELETE
+        const deletedUser = await prisma.user.update({
+            where: { id },
+            data: { deletedAt: new Date() }
+        });
 
         await createAuditLog(
             session.user.id,
-            "DELETE",
+            "DELETE (SOFT)",
             "USER",
             id,
             { deletedUsername: deletedUser.username }
         );
 
-        return successResponse(undefined, "Kullanıcı silindi");
+        return successResponse(undefined, "Kullanıcı silindi (Arşivlendi)");
     } catch (error) {
         devError("Users DELETE Error:", error);
+        return internalErrorResponse();
+    }
+}
+
+export async function PATCH(req: Request) {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== 'ADMIN') {
+        return forbiddenResponse("Sadece Project Owner kullanıcıları geri yükleyebilir");
+    }
+
+    try {
+        const body = await req.json();
+        const { id, action } = body;
+
+        if (!id || action !== 'restore') {
+            return errorResponse("Geçersiz istek", 400);
+        }
+
+        const restoredUser = await prisma.user.update({
+            where: { id },
+            data: { deletedAt: null }
+        });
+
+        await createAuditLog(
+            session.user.id,
+            "RESTORE",
+            "USER",
+            id,
+            { username: restoredUser.username }
+        );
+
+        return successResponse(undefined, "Kullanıcı geri yüklendi");
+    } catch (error) {
+        devError("Users PATCH Error:", error);
         return internalErrorResponse();
     }
 }
