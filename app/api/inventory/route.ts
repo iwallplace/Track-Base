@@ -255,6 +255,11 @@ export async function POST(req: Request) {
 
         const data = validation.data;
 
+        // Strict Validation: Company is required for 'Giriş'
+        if (data.lastAction === 'Giriş' && !data.company) {
+            return validationErrorResponse("Giriş işlemleri için Firma adı zorunludur");
+        }
+
         // Calculate Date parts for Europe/Istanbul
         const now = new Date();
         const dateFormatter = new Intl.DateTimeFormat('en-US', {

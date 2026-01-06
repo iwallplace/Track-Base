@@ -50,7 +50,12 @@ export default function DashboardPage() {
     const [canDelete, setCanDelete] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
     const [showDeleted, setShowDeleted] = useState(false);
-    const [modalInitialData, setModalInitialData] = useState<any>(null);
+    const [modalInitialData, setModalInitialData] = useState<{
+        company?: string;
+        waybillNo?: string;
+        materialReference?: string;
+        note?: string;
+    } | null>(null);
 
     const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement>(null);

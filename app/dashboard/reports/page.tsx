@@ -59,7 +59,7 @@ function getDateRangeFromPeriod(period: string): { start: Date | null; end: Date
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ startDate?: string; endDate?: string; period?: string }> }) {
-    console.log("ReportsPage: Starting...");
+    // console.log("ReportsPage: Starting...");
     try {
         const session = await getServerSession(authOptions);
         if (!session) redirect("/login");
@@ -311,7 +311,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             systemMetrics
         };
 
-        console.log("ReportsPage: Data calculated successfully.");
+        // console.log("ReportsPage: Data calculated successfully.");
 
         return <ReportsView data={data} period={period} />;
 
