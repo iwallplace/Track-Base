@@ -49,10 +49,10 @@ export async function GET(req: Request) {
     const endDate = searchParams.get('endDate');
 
     try {
-        const whereClause: any = {};
+        const baseWhere: any = { deletedAt: null }; // Soft Delete Filter
 
         if (search) {
-            whereClause.OR = [
+            baseWhere.OR = [
                 { materialReference: { contains: search } },
                 { company: { contains: search } },
                 { waybillNo: { contains: search } }
@@ -60,14 +60,14 @@ export async function GET(req: Request) {
         }
 
         if (status) {
-            whereClause.lastAction = status;
+            baseWhere.lastAction = status;
         }
 
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-            whereClause.date = { gte: start, lte: end };
+            baseWhere.date = { gte: start, lte: end };
         } else if (dateFilter === 'this_week' && !search && view !== 'summary') {
             const now = new Date();
             const dayOfWeek = now.getDay();
@@ -78,14 +78,13 @@ export async function GET(req: Request) {
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 6);
             endOfWeek.setHours(23, 59, 59, 999);
-            whereClause.date = { gte: startOfWeek, lte: endOfWeek };
+            baseWhere.date = { gte: startOfWeek, lte: endOfWeek };
         }
 
         if (view === 'summary') {
-            // 1. Separate Status from WhereClause for initial fetch
-            // We need to find materials that match Search/Date, then check their LATEST status
-            const queryWhere = { ...whereClause };
-            delete queryWhere.lastAction; // Remove status filter from DB query
+            // 1. Separate Status from baseWhere for initial fetch
+            const queryWhere = { ...baseWhere };
+            delete queryWhere.lastAction;
 
             // 2. Find all distinct materials matching Search/Date
             const distinctMaterials = await prisma.inventoryItem.findMany({
@@ -110,21 +109,18 @@ export async function GET(req: Request) {
                 if (latestItem) {
                     // 4. Apply Status Filter here (on the LATEST item)
                     if (status && latestItem.lastAction !== status) {
-                        continue; // Skip if latest status doesn't match filter
+                        continue;
                     }
 
-                    // Calculate Global Balance (Always global for accuracy)
-                    // Note: If view assumes "Balance at date", this should be adjusted.
-                    // But current UI implies "Current Stock" vs "History".
-                    // The previous code calculated global balance. Keeping it consistent.
+                    // Calculate Global Balance
                     const [entrySum, exitSum] = await Promise.all([
                         prisma.inventoryItem.aggregate({
                             _sum: { stockCount: true },
-                            where: { materialReference: ref, lastAction: 'Giriş' }
+                            where: { materialReference: ref, lastAction: 'Giriş', deletedAt: null }
                         }),
                         prisma.inventoryItem.aggregate({
                             _sum: { stockCount: true },
-                            where: { materialReference: ref, lastAction: 'Çıkış' }
+                            where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: null }
                         })
                     ]);
 
@@ -179,12 +175,12 @@ export async function GET(req: Request) {
 
         const [inventory, total] = await prisma.$transaction([
             prisma.inventoryItem.findMany({
-                where: whereClause,
+                where: baseWhere,
                 orderBy: { createdAt: "desc" },
                 skip: limit ? (page - 1) * limit : undefined,
                 take: limit,
             }),
-            prisma.inventoryItem.count({ where: whereClause })
+            prisma.inventoryItem.count({ where: baseWhere })
         ]);
 
         const userIds = [...new Set(inventory.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
@@ -226,7 +222,6 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         // Check Permissions (Fortress Level)
-        // Check Permissions (Fortress Level)
         const hasCreatePermission = await hasPermission(session.user.role || "USER", 'inventory.create');
         if (!hasCreatePermission) {
             console.warn(`[SECURITY] Unauthorized inventory creation attempt by user: ${session.user.id} (${session.user.role})`);
@@ -255,7 +250,6 @@ export async function POST(req: Request) {
         const month = parseInt(parts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1));
         const day = parseInt(parts.find(p => p.type === 'day')?.value || String(now.getDate()));
 
-        // Construct date object (noon to avoid timezone shifting issues on display if possible, or just strict date)
         const date = new Date(year, month - 1, day);
 
         // Simple ISO week calculation
@@ -269,61 +263,71 @@ export async function POST(req: Request) {
         }
         const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 
-        // Check stock availability for Exit actions
-        if (data.lastAction === 'Çıkış') {
-            const totals = await prisma.inventoryItem.groupBy({
-                by: ['lastAction'],
-                where: {
-                    materialReference: data.materialReference
-                },
-                _sum: {
-                    stockCount: true
+        // TRANSACTIONAL WRITE (Critical Section)
+        const item = await prisma.$transaction(async (tx) => {
+            // 1. Concurrency Check: Calculate stock within transaction
+            if (data.lastAction === 'Çıkış') {
+                const totals = await tx.inventoryItem.groupBy({
+                    by: ['lastAction'],
+                    where: {
+                        materialReference: data.materialReference,
+                        deletedAt: null
+                    },
+                    _sum: { stockCount: true }
+                });
+
+                let totalEntry = 0;
+                let totalExit = 0;
+
+                totals.forEach(t => {
+                    if (t.lastAction === 'Giriş') totalEntry += t._sum.stockCount || 0;
+                    if (t.lastAction === 'Çıkış') totalExit += t._sum.stockCount || 0;
+                });
+
+                const currentStock = totalEntry - totalExit;
+
+                if (currentStock < data.stockCount) {
+                    throw new Error(`INSUFFICIENT_STOCK:${currentStock}:${data.stockCount}`);
+                }
+            }
+
+            // 2. Create the Item
+            const createdItem = await tx.inventoryItem.create({
+                data: {
+                    year: year,
+                    month: month,
+                    week: week,
+                    date: date,
+                    company: data.company || "",
+                    waybillNo: data.waybillNo || "",
+                    materialReference: data.materialReference,
+                    stockCount: data.stockCount,
+                    lastAction: data.lastAction || "Giriş",
+                    note: data.note || "",
+                    lastModifiedBy: session.user.id
                 }
             });
 
-            let totalEntry = 0;
-            let totalExit = 0;
-
-            totals.forEach(t => {
-                if (t.lastAction === 'Giriş') totalEntry += t._sum.stockCount || 0;
-                if (t.lastAction === 'Çıkış') totalExit += t._sum.stockCount || 0;
+            // 3. Create Audit Log (Atomic with Item Creation)
+            await tx.auditLog.create({
+                data: {
+                    userId: session.user.id,
+                    action: "CREATE",
+                    entity: "INVENTORY",
+                    entityId: createdItem.id,
+                    details: JSON.stringify({ materialReference: data.materialReference, stockCount: data.stockCount, action: data.lastAction })
+                }
             });
 
-            const currentStock = totalEntry - totalExit;
-
-            if (currentStock < data.stockCount) {
-                console.warn(`[AUDIT] Failed Exit: Insufficient stock for ${data.materialReference}. Requested: ${data.stockCount}, Available: ${currentStock}`);
-                return errorResponse(`Yetersiz Stok! Mevcut stok: ${currentStock}, Çıkış istenen: ${data.stockCount}`);
-            }
-        }
-
-        const item = await prisma.inventoryItem.create({
-            data: {
-                year: year,
-                month: month,
-                week: week,
-                date: date,
-                company: data.company || "",
-                waybillNo: data.waybillNo || "",
-                materialReference: data.materialReference,
-                stockCount: data.stockCount,
-                lastAction: data.lastAction || "Giriş",
-                note: data.note || "",
-                lastModifiedBy: session.user.id
-            }
+            return createdItem;
         });
 
-        // Audit Log
-        await createAuditLog(
-            session.user.id,
-            "CREATE",
-            "INVENTORY",
-            item.id,
-            { materialReference: data.materialReference, stockCount: data.stockCount, action: data.lastAction }
-        );
-
         return successResponse(item, "Envanter kaydı oluşturuldu");
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message?.startsWith('INSUFFICIENT_STOCK')) {
+            const [_, checkStock, checkRequested] = error.message.split(':');
+            return errorResponse(`Yetersiz Stok! Mevcut stok: ${checkStock}, Çıkış istenen: ${checkRequested}`);
+        }
         devError("Inventory POST Error:", error);
         return internalErrorResponse();
     }
@@ -347,19 +351,27 @@ export async function DELETE(req: Request) {
             return errorResponse("ID gerekli", 400);
         }
 
-        await prisma.inventoryItem.delete({
-            where: { id }
+        // TRANSACTIONAL SOFT DELETE
+        await prisma.$transaction(async (tx) => {
+            // 1. Soft Delete
+            await tx.inventoryItem.update({
+                where: { id },
+                data: { deletedAt: new Date() }
+            });
+
+            // 2. Audit Log
+            await tx.auditLog.create({
+                data: {
+                    userId: session.user.id,
+                    action: "DELETE (SOFT)",
+                    entity: "INVENTORY",
+                    entityId: id,
+                    details: JSON.stringify({ id })
+                }
+            });
         });
 
-        await createAuditLog(
-            session.user.id,
-            "DELETE",
-            "INVENTORY",
-            id,
-            { id }
-        );
-
-        return successResponse(undefined, "Kayıt silindi");
+        return successResponse(undefined, "Kayıt silindi (Arşivlendi)");
     } catch (error) {
         devError("Inventory DELETE Error:", error);
         return internalErrorResponse();
