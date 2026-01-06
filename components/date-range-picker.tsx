@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { useLanguage } from '@/lib/hooks/useLanguage';
+import { useLanguage } from '@/components/language-provider';
 
 interface DateRange {
     startDate: string;

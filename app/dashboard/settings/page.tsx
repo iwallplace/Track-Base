@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Lock, Mail, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useLanguage } from '@/lib/hooks/useLanguage';
+import { useLanguage } from '@/components/language-provider';
 import AuditLogViewer from '@/components/audit-log-viewer';
 
 export default function SettingsPage() {

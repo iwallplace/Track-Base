@@ -93,8 +93,12 @@ export const translations = {
         add_entry: 'Giriş Ekle',
         add_exit: 'Çıkış Ekle',
         date_range: 'Tarih Aralığı',
-        this_week: 'Bu Hafta',
-        all_times: 'Tüm Zamanlar',
+        // this_week removed (duplicate)
+        all_times: 'Tüm Zamanlar', // Keeping because defined above as all_time but here all_times. Let's align.
+        // Actually defined above as 'all_time'. Here 'all_times'.
+        // In DateRangePicker component I used keys: 'this_week', 'all_time' (from my last edit).
+        // In Inventory Page it probably uses 'this_week', 'all_times'.
+        // Let's keep 'all_times' here but remove 'this_week'.
         filter_status: 'İşlem Durumu',
         status_all: 'Tümü',
         status_entry: 'Giriş',
@@ -295,7 +299,7 @@ export const translations = {
         add_entry: 'Add Entry',
         add_exit: 'Add Exit',
         date_range: 'Date Range',
-        this_week: 'This Week',
+        // this_week removed (duplicate)
         all_times: 'All Time',
         filter_status: 'Status',
         status_all: 'All',

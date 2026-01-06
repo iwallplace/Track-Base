@@ -11,7 +11,7 @@ import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/components/toast';
-import { useLanguage } from '@/lib/hooks/useLanguage';
+import { useLanguage } from '@/components/language-provider';
 
 interface ReportsViewProps {
     data: {
