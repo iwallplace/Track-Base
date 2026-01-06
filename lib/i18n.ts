@@ -124,6 +124,8 @@ export const translations = {
         col_stock: 'STOK ADET',
         col_note: 'NOT',
         col_modifier: 'İşlemi Yapan',
+        col_last_update: 'Son Güncelleme',
+        col_total_stock: 'Toplam Stok',
 
         // Material History
         material_history: 'Malzeme Geçmişi',
