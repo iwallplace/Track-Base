@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
+import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
 import DateRangePicker from '@/components/date-range-picker';
@@ -418,13 +418,41 @@ export default function DashboardPage() {
                                     <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">{item.note}</td>
                                     {canDelete && (
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={(e) => handleDeleteClick(e, item.id)}
-                                                className="text-muted-foreground hover:text-red-500 transition-colors p-1"
-                                                title={t('delete')}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            {showDeleted ? (
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            const res = await fetch('/api/inventory', {
+                                                                method: 'PATCH',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ id: item.id, action: 'restore' })
+                                                            });
+                                                            if (res.ok) {
+                                                                showToast(t('restore_success'), 'success');
+                                                                fetchItems();
+                                                            } else {
+                                                                showToast(t('restore_failed'), 'error');
+                                                            }
+                                                        } catch (error) {
+                                                            console.error(error);
+                                                            showToast(t('error'), 'error');
+                                                        }
+                                                    }}
+                                                    className="text-muted-foreground hover:text-blue-500 transition-colors p-1"
+                                                    title={t('restore')}
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => handleDeleteClick(e, item.id)}
+                                                    className="text-muted-foreground hover:text-red-500 transition-colors p-1"
+                                                    title={t('delete')}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </td>
                                     )}
                                 </motion.tr>

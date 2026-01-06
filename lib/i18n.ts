@@ -133,6 +133,9 @@ export const translations = {
         pcs: 'Adet',
         deleted: 'Kayıt silindi.',
         delete_failed: 'Silme başarısız',
+        restore: 'Geri Yükle',
+        restore_success: 'Kayıt geri yüklendi',
+        restore_failed: 'Geri yükleme başarısız',
         back: 'Geri',
 
         // Validation
@@ -338,6 +341,9 @@ export const translations = {
         pcs: 'Pcs',
         deleted: 'Record deleted.',
         delete_failed: 'Delete failed',
+        restore: 'Restore',
+        restore_success: 'Record restored',
+        restore_failed: 'Restore failed',
         back: 'Back',
 
         // Validation

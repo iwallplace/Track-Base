@@ -396,3 +396,49 @@ export async function DELETE(req: Request) {
         return internalErrorResponse();
     }
 }
+
+export async function PATCH(req: Request) {
+    const session = await getServerSession(authOptions);
+
+    if (!session) return unauthorizedResponse();
+
+    // Use same permission as delete for now, as restoring is effectively undoing a delete
+    const hasDeletePermission = await hasPermission(session.user.role || "USER", 'inventory.delete');
+    if (!hasDeletePermission) {
+        return forbiddenResponse("Bu işlem için yetkiniz yok (Envanter kaydı geri alma)");
+    }
+
+    try {
+        const body = await req.json();
+        const { id, action } = body;
+
+        if (!id || action !== 'restore') {
+            return errorResponse("Geçersiz istek", 400);
+        }
+
+        // TRANSACTIONAL RESTORE
+        await prisma.$transaction(async (tx) => {
+            // 1. Restore Item
+            await tx.inventoryItem.update({
+                where: { id },
+                data: { deletedAt: null }
+            });
+
+            // 2. Audit Log
+            await tx.auditLog.create({
+                data: {
+                    userId: session.user.id,
+                    action: "RESTORE",
+                    entity: "INVENTORY",
+                    entityId: id,
+                    details: JSON.stringify({ id })
+                }
+            });
+        });
+
+        return successResponse(undefined, "Kayıt başarıyla geri yüklendi");
+    } catch (error) {
+        devError("Inventory PATCH Error:", error);
+        return internalErrorResponse();
+    }
+}
