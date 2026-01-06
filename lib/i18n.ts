@@ -122,6 +122,7 @@ export const translations = {
         records: 'kayıt',
         // Reports
         reports_title: 'Raporlar',
+        no_results: 'Sonuç bulunamadı.',
         reports_desc: 'Genel bakış ve performans analizleri',
         ai_summary_title: 'Yönetici Özeti (AI Analizi)',
         ai_summary_button: 'Yönetici Özeti (AI)',
@@ -172,6 +173,11 @@ export const translations = {
         enter_name: 'Adınız Soyadınız',
         enter_current_password: '••••••••',
         email_username_desc: 'Bu adres ile sisteme giriş yapacaksınız.',
+
+        // Audit Logs
+        audit_logs: 'Sistem Kayıtları (Audit Logs)',
+        details: 'Detaylar',
+        showing_last_100: 'Son 100 işlem gösteriliyor',
     },
     en: {
         // Navigation
@@ -297,6 +303,7 @@ export const translations = {
 
         // Reports
         reports_title: 'Reports',
+        no_results: 'No results found.',
         reports_desc: 'Overview and performance analysis',
         ai_summary_title: 'Executive Summary (AI Analysis)',
         ai_summary_button: 'Executive Summary (AI)',
@@ -347,6 +354,11 @@ export const translations = {
         enter_name: 'Your Name Surname',
         enter_current_password: '••••••••',
         email_username_desc: 'You will use this address to login.',
+
+        // Audit Logs
+        audit_logs: 'System Logs (Audit Logs)',
+        details: 'Details',
+        showing_last_100: 'Showing last 100 transactions',
     }
 };
 

@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Lock, Mail, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '@/components/language-provider';
+import AuditLogViewer from '@/components/audit-log-viewer';
 
 export default function SettingsPage() {
     const { data: session, update } = useSession();
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -259,10 +262,18 @@ export default function SettingsPage() {
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <Save className="h-4 w-4" />
-                        {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+                        {loading ? t('saving') : t('save_changes')}
                     </button>
                 </div>
             </form>
+
+            <div className="pt-8 border-t border-border">
+                {session?.user?.role === 'ADMIN' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <AuditLogViewer />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
