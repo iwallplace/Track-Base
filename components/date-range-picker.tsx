@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
+import { useLanguage } from '@/lib/hooks/useLanguage';
 
 interface DateRange {
     startDate: string;
@@ -13,69 +14,84 @@ interface DateRangePickerProps {
     initialRange?: DateRange;
 }
 
-// Preset date ranges
-const PRESETS = [
-    {
-        label: 'Bugün', getValue: () => {
-            const today = new Date().toLocaleDateString('en-CA');
-            return { startDate: today, endDate: today };
-        }
-    },
-    {
-        label: 'Son 7 Gün', getValue: () => {
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - 7);
-            return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
-        }
-    },
-    {
-        label: 'Bu Hafta', getValue: () => {
-            const now = new Date();
-            const day = now.getDay(); // 0 is Sunday
-            // Adjust for Monday start if needed, but assuming standard Sunday start logic for now or simple diff
-            // Basic logic: start of week (Sunday or Monday)
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
-            const start = new Date(now.setDate(diff));
-            const end = new Date();
-            return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
-        }
-    },
-    {
-        label: 'Bu Ay', getValue: () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), now.getMonth(), 1);
-            return { startDate: start.toLocaleDateString('en-CA'), endDate: now.toLocaleDateString('en-CA') };
-        }
-    },
-    {
-        label: 'Son 30 Gün', getValue: () => {
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - 30);
-            return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
-        }
-    },
-    {
-        label: 'Bu Yıl', getValue: () => {
-            const now = new Date();
-            const start = new Date(now.getFullYear(), 0, 1);
-            return { startDate: start.toLocaleDateString('en-CA'), endDate: now.toLocaleDateString('en-CA') };
-        }
-    },
-    {
-        label: 'Tüm Zamanlar', getValue: () => {
-            return { startDate: '2020-01-01', endDate: new Date().toLocaleDateString('en-CA') };
-        }
-    }
-];
-
 export default function DateRangePicker({ onChange, initialRange }: DateRangePickerProps) {
+    const { t, language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
+
+    // Define presets inside component to use translations
+    const PRESETS = [
+        {
+            label: t('today') || 'Today',
+            getValue: () => {
+                const today = new Date().toLocaleDateString('en-CA');
+                return { startDate: today, endDate: today };
+            }
+        },
+        {
+            label: t('last_7_days') || 'Last 7 Days',
+            getValue: () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 7);
+                return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
+            }
+        },
+        {
+            label: t('this_week') || 'This Week',
+            getValue: () => {
+                const now = new Date();
+                const day = now.getDay(); // 0 is Sunday
+                // Adjust for Monday start if needed, but assuming standard Sunday start logic for now or simple diff
+                // Basic logic: start of week (Sunday or Monday)
+                const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+                const start = new Date(now.setDate(diff));
+                const end = new Date();
+                return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
+            }
+        },
+        {
+            label: t('this_month') || 'This Month',
+            getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                return { startDate: start.toLocaleDateString('en-CA'), endDate: now.toLocaleDateString('en-CA') };
+            }
+        },
+        {
+            label: t('last_30_days') || 'Last 30 Days',
+            getValue: () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 30);
+                return { startDate: start.toLocaleDateString('en-CA'), endDate: end.toLocaleDateString('en-CA') };
+            }
+        },
+        {
+            label: t('this_year') || 'This Year',
+            getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), 0, 1);
+                return { startDate: start.toLocaleDateString('en-CA'), endDate: now.toLocaleDateString('en-CA') };
+            }
+        },
+        {
+            label: t('all_times') || 'All Time',
+            getValue: () => {
+                return { startDate: '2020-01-01', endDate: new Date().toLocaleDateString('en-CA') };
+            }
+        }
+    ];
+
     const [range, setRange] = useState<DateRange>(initialRange || PRESETS[3].getValue()); // Default: Bu Ay
-    const [activePreset, setActivePreset] = useState<string>('Bu Ay');
+    const [activePreset, setActivePreset] = useState<string>(t('this_month') || 'This Month');
     const [isDateInputActive, setIsDateInputActive] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Update active preset label when language changes
+    useEffect(() => {
+        // Force reset to 'This Month' translated if default
+        setActivePreset(t('this_month') || 'This Month');
+    }, [language, t]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -120,12 +136,12 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
     const handleCustomChange = (field: 'startDate' | 'endDate', value: string) => {
         const newRange = { ...range, [field]: value };
         setRange(newRange);
-        setActivePreset('Özel');
+        setActivePreset(t('custom_range') || 'Custom');
         // Don't call onChange here - wait for Apply button
     };
 
     const formatDisplayDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('tr-TR', {
+        return new Date(dateStr).toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', {
             day: 'numeric',
             month: 'short',
             year: 'numeric'
@@ -153,7 +169,7 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
                     <div className="flex">
                         {/* Presets */}
                         <div className="w-1/2 border-r border-border p-3">
-                            <p className="text-xs text-muted-foreground mb-2 px-2">Hızlı Seçim</p>
+                            <p className="text-xs text-muted-foreground mb-2 px-2">{t('quick_select') || 'Quick Select'}</p>
                             <div className="space-y-1">
                                 {PRESETS.map((preset) => (
                                     <button
@@ -172,10 +188,10 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
 
                         {/* Custom Date Inputs */}
                         <div className="w-1/2 p-4">
-                            <p className="text-xs text-muted-foreground mb-3">Özel Aralık</p>
+                            <p className="text-xs text-muted-foreground mb-3">{t('custom_range') || 'Custom Range'}</p>
                             <div className="space-y-3">
                                 <div>
-                                    <label className="block text-xs text-muted-foreground mb-1">Başlangıç</label>
+                                    <label className="block text-xs text-muted-foreground mb-1">{t('start_date') || 'Start'}</label>
                                     <input
                                         type="date"
                                         value={range.startDate}
@@ -187,7 +203,7 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-muted-foreground mb-1">Bitiş</label>
+                                    <label className="block text-xs text-muted-foreground mb-1">{t('end_date') || 'End'}</label>
                                     <input
                                         type="date"
                                         value={range.endDate}
@@ -206,7 +222,7 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
                                 }}
                                 className="mt-4 w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                             >
-                                Uygula
+                                {t('apply') || 'Apply'}
                             </button>
                         </div>
                     </div>

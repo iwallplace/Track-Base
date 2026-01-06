@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/components/toast';
+import { useLanguage } from '@/lib/hooks/useLanguage';
 
 interface ReportsViewProps {
     data: {
@@ -39,6 +40,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 export default function ReportsView({ data, period }: ReportsViewProps) {
     const router = useRouter();
     const { showToast } = useToast();
+    const { t } = useLanguage();
     const reportRef = useRef<HTMLDivElement>(null);
 
     const [summary, setSummary] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
         }
 
         const btn = document.getElementById('download-pdf-btn');
-        if (btn) btn.innerText = "Hazırlanıyor...";
+        if (btn) btn.innerText = t('loading') || "Hazırlanıyor...";
 
         try {
             const originalStyle = pdfTemplate.style.cssText;
@@ -96,14 +98,14 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
             pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(`KPI-Rapor-${period.replace(/\s/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
 
-            if (btn) btn.innerHTML = '<Download class="h-4 w-4" /> PDF İndir';
+            if (btn) btn.innerHTML = `<Download class="h-4 w-4" /> ${t('download_pdf')}`;
             showToast('PDF başarıyla indirildi', 'success');
         } catch (error) {
             console.error(error);
             const pdfTemplate = document.getElementById('pdf-report-template');
             if (pdfTemplate) pdfTemplate.style.left = '-9999px';
             showToast("PDF oluşturulamadı: " + (error as any).message, 'error');
-            if (btn) btn.innerHTML = '<Download class="h-4 w-4" /> PDF İndir';
+            if (btn) btn.innerHTML = `<Download class="h-4 w-4" /> ${t('download_pdf')}`;
         }
     };
 
@@ -139,19 +141,19 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
         // Sheet 1: Summary
         const summaryData = [
             ['Metrik', 'Değer'],
-            ['Toplam Malzeme Ref', data.uniqueMaterialCount],
-            ['Toplam Stok Adedi', data.totalStock],
-            ['Stok Devir Hızı', `%${data.turnoverRate}`],
-            ['Ölü Stok', data.deadStockCount],
-            ['Kritik Seviye', data.lowStockCount],
+            [t('total_materials'), data.uniqueMaterialCount],
+            [t('col_total_stock'), data.totalStock],
+            [t('stock_turnover_rate'), `%${data.turnoverRate}`],
+            [t('dead_stock'), data.deadStockCount],
+            [t('critical_level'), data.lowStockCount],
         ];
         const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, ws1, 'Özet');
+        XLSX.utils.book_append_sheet(wb, ws1, t('reports_title'));
 
         // Sheet 2: Status Counts
-        const statusData = [['Durum', 'Adet'], ...data.statusCounts.map(s => [s.name, s.value])];
+        const statusData = [[t('filter_status'), t('pcs')], ...data.statusCounts.map(s => [s.name, s.value])];
         const ws2 = XLSX.utils.aoa_to_sheet(statusData);
-        XLSX.utils.book_append_sheet(wb, ws2, 'İşlem Durumları');
+        XLSX.utils.book_append_sheet(wb, ws2, t('transaction_distribution'));
 
         XLSX.writeFile(wb, `Rapor-${period.replace(/\s/g, '-')}-${new Date().toISOString().split('T')[0]}.xlsx`);
     };
@@ -161,8 +163,8 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
             {/* Header without DateRangePicker */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground">Raporlar</h2>
-                    <p className="text-muted-foreground">Genel bakış ve performans analizleri</p>
+                    <h2 className="text-2xl font-bold text-foreground">{t('reports_title')}</h2>
+                    <p className="text-muted-foreground">{t('reports_desc')}</p>
                 </div>
             </div>
 
@@ -174,7 +176,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                     className="flex items-center gap-2 rounded-lg border border-purple-500/50 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 transition-colors"
                 >
                     <Bot className={`h-4 w-4 ${generatingSummary ? 'animate-pulse' : ''}`} />
-                    {generatingSummary ? 'Analiz Ediliyor...' : 'Yönetici Özeti (AI)'}
+                    {generatingSummary ? t('analyzing') : t('ai_summary_button')}
                 </button>
 
                 <button
@@ -183,7 +185,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                     className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
                 >
                     <Download className="h-4 w-4" />
-                    PDF İndir
+                    {t('download_pdf')}
                 </button>
             </div>
 
@@ -192,7 +194,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                 <div className="rounded-xl border border-border bg-muted/30 p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Bot className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Yönetici Özeti (AI Analizi)</h3>
+                        <h3 className="text-lg font-semibold text-foreground">{t('ai_summary_title')}</h3>
                     </div>
                     <div className="text-sm text-foreground whitespace-pre-line leading-relaxed font-medium">
                         {summary}
@@ -205,28 +207,28 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                 {/* KPI Cards */}
                 <div className="grid gap-4 md:grid-cols-4 mb-6">
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">TOPLAM MALZEME</div>
+                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('total_materials')}</div>
                         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{data.uniqueMaterialCount?.toLocaleString()}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Farklı Referans</div>
+                        <div className="text-xs text-muted-foreground mt-1">{t('diff_references')}</div>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">Stok Devir Hızı</div>
+                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('stock_turnover_rate')}</div>
                         <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">%{data.turnoverRate}</div>
-                        <div className="text-xs text-emerald-600/70 dark:text-emerald-500/70 mt-1">Satış Dönüşüm</div>
+                        <div className="text-xs text-emerald-600/70 dark:text-emerald-500/70 mt-1">{t('sales_conversion')}</div>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">Ölü Stok (90+ Gün)</div>
+                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('dead_stock')}</div>
                         <div className={`text-2xl font-bold mt-1 ${data.deadStockCount > 0 ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
                             {data.deadStockCount}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">Kalem Ürün</div>
+                        <div className="text-xs text-muted-foreground mt-1">{t('stock_items')}</div>
                     </div>
                     <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">Kritik Seviye</div>
+                        <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('critical_level')}</div>
                         <div className={`text-2xl font-bold mt-1 ${data.lowStockCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground'}`}>
                             {data.lowStockCount}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">Low Stock</div>
+                        <div className="text-xs text-muted-foreground mt-1">{t('low_stock_label')}</div>
                     </div>
                 </div>
 
@@ -234,7 +236,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                 <div className="grid gap-6 md:grid-cols-2 mb-6">
                     {/* Status Breakdown */}
                     <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                        <h3 className="mb-6 text-lg font-medium text-foreground">İşlem Durumu Dağılımı</h3>
+                        <h3 className="mb-6 text-lg font-medium text-foreground">{t('transaction_distribution')}</h3>
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -260,6 +262,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                             </ResponsiveContainer>
                         </div>
                     </div>
+
 
                     {/* Monthly Activity Area Chart */}
                     {data.monthlyActivity && data.monthlyActivity.length > 0 ? (

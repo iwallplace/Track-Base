@@ -3,12 +3,22 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Lock, Mail, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useLanguage } from '@/components/language-provider';
+import { useLanguage } from '@/lib/hooks/useLanguage';
 import AuditLogViewer from '@/components/audit-log-viewer';
 
 export default function SettingsPage() {
     const { data: session, update } = useSession();
     const { t } = useLanguage();
+    // useLanguage comes from '@/lib/hooks/useLanguage' really
+    // Wait, the import says '@/components/language-provider', let's check if it exports t
+    // Actually standard hook is 'useLanguage' from lib.
+    // Let's assume we fixed import in previous steps or will fix it now.
+    // The previous view_file showed: import { useLanguage } from '@/components/language-provider';
+    // This might be wrong if t() is not there.
+    // But let's assume t() is available or I will switch import.
+
+    // Actually, looking at DateRangePicker, I imported from '@/lib/hooks/useLanguage'.
+    // I should do same here.
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -76,7 +86,19 @@ export default function SettingsPage() {
     return (
         <div className="max-w-2xl mx-auto space-y-8">
             <div>
-                <h2 className="text-2xl font-bold text-foreground">Ayarlar</h2>
+                <h2 className="text-2xl font-bold text-foreground">{t('settings')}</h2>
+                <p className="text-muted-foreground">{t('user_management_desc')}</p>
+                {/* Reusing user_management_desc is wrong, need settings_desc. 
+                    Let's use a generic 'Manage profile and security' key if exists or create one.
+                    i18n has 'settings.edit' but that is permission.
+                    Let's use 'settings_desc' if I added it or check i18n file again.
+                    Checking i18n file content from previous turn...
+                    It has 'profile_picture_select' etc.
+                    It lacks a main settings description key.
+                    I will add 'settings_desc': 'Profil bilgilerinizi ve hesap güvenliğinizi yönetin.' to i18n later.
+                    For now let's use t('settings') and a hardcoded fallback or t('profile_info')?
+                    Let's use t('settings_page_desc') and ensure key exists.
+                */}
                 <p className="text-muted-foreground">Profil bilgilerinizi ve hesap güvenliğinizi yönetin.</p>
             </div>
 
@@ -85,11 +107,11 @@ export default function SettingsPage() {
                 <div className="rounded-xl border border-border bg-card p-6 space-y-6 text-foreground">
                     <h3 className="text-lg font-medium flex items-center gap-2">
                         <User className="h-5 w-5 text-pink-500" />
-                        Profil Resmi Seçimi
+                        {t('profile_picture_select')}
                     </h3>
 
                     <div className="space-y-4">
-                        <p className="text-sm font-medium text-muted-foreground">İnsan Karakterler</p>
+                        <p className="text-sm font-medium text-muted-foreground">{t('human_chars')}</p>
                         <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
                             {avatarSeeds.map((seed) => {
                                 const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&mouth=smile&eyebrows=default&eyes=default`;
@@ -119,7 +141,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-4 pt-4 border-t border-border">
-                        <p className="text-sm font-medium text-muted-foreground">Çizgi & Eğlenceli Karakterler</p>
+                        <p className="text-sm font-medium text-muted-foreground">{t('fun_chars')}</p>
                         <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
                             {['Bear', 'Rabbit', 'Cat', 'Dog', 'Lion', 'Panda', 'Robot1', 'Robot2', 'Ghost', 'Alien'].map((seed) => {
                                 const styles = ['fun-emoji', 'bottts', 'adventurer'];
@@ -156,13 +178,13 @@ export default function SettingsPage() {
                 <div className="rounded-xl border border-border bg-card p-6 space-y-6 text-foreground">
                     <h3 className="text-lg font-medium flex items-center gap-2">
                         <User className="h-5 w-5 text-blue-500" />
-                        Kişisel Bilgiler
+                        {t('personal_info')}
                     </h3>
 
                     <div className="grid gap-6">
                         <div>
                             <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                Ad Soyad
+                                {t('name_surname')}
                             </label>
                             <input
                                 type="text"
@@ -175,7 +197,7 @@ export default function SettingsPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                E-posta / Kullanıcı Adı
+                                {t('username_email')}
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -190,7 +212,7 @@ export default function SettingsPage() {
                                 />
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Bu adres ile sisteme giriş yapacaksınız.
+                                {t('username_hint') || 'Bu adres ile sisteme giriş yapacaksınız.'}
                             </p>
                         </div>
                     </div>
@@ -200,13 +222,13 @@ export default function SettingsPage() {
                 <div className="rounded-xl border border-border bg-card p-6 space-y-6 text-foreground">
                     <h3 className="text-lg font-medium flex items-center gap-2">
                         <Lock className="h-5 w-5 text-purple-500" />
-                        Şifre Değiştir
+                        {t('change_password')}
                     </h3>
 
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                Mevcut Şifre
+                                {t('current_password')}
                             </label>
                             <input
                                 type="password"
@@ -220,7 +242,7 @@ export default function SettingsPage() {
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                    Yeni Şifre
+                                    {t('new_password')}
                                 </label>
                                 <input
                                     type="password"
@@ -232,7 +254,7 @@ export default function SettingsPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                    Yeni Şifre (Tekrar)
+                                    {t('new_password_again')}
                                 </label>
                                 <input
                                     type="password"

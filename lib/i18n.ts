@@ -28,6 +28,24 @@ export const translations = {
         permission_note: 'Değişiklikler anında uygulanır. Project Owner yetkileri değiştirilemez.',
         cannot_remove_admin: 'Project Owner yetkileri değiştirilemez',
 
+        // Settings Page
+        settings_desc: 'Profil bilgilerinizi ve hesap güvenliğinizi yönetin.',
+        username_hint: 'Bu adres ile sisteme giriş yapacaksınız.',
+
+        // Date Range Picker
+        today: 'Bugün',
+        last_7_days: 'Son 7 Gün',
+        this_week: 'Bu Hafta',
+        this_month: 'Bu Ay',
+        last_30_days: 'Son 30 Gün',
+        this_year: 'Bu Yıl',
+        all_time: 'Tüm Zamanlar',
+        custom_range: 'Özel Aralık',
+        quick_select: 'Hızlı Seçim',
+        start_date: 'Başlangıç',
+        end_date: 'Bitiş',
+        apply: 'Uygula',
+
         // Forms
         name_surname: 'Ad Soyad',
         username_email: 'E-posta / Kullanıcı Adı',
@@ -208,6 +226,24 @@ export const translations = {
         permission_col: 'Permission',
         permission_note: 'Changes apply immediately. Project Owner permissions cannot be changed.',
         cannot_remove_admin: 'Project Owner permissions cannot be changed',
+
+        // Settings Page
+        settings_desc: 'Manage your profile information and account security.',
+        username_hint: 'You will use this address to log in to the system.',
+
+        // Date Range Picker
+        today: 'Today',
+        last_7_days: 'Last 7 Days',
+        this_week: 'This Week',
+        this_month: 'This Month',
+        last_30_days: 'Last 30 Days',
+        this_year: 'This Year',
+        all_time: 'All Time',
+        custom_range: 'Custom Range',
+        quick_select: 'Quick Select',
+        start_date: 'Start',
+        end_date: 'End',
+        apply: 'Apply',
 
         // Forms
         name_surname: 'Name Surname',
