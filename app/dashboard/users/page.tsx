@@ -394,7 +394,7 @@ export default function UsersPage() {
                                         <div className="text-muted-foreground text-xs text-ellipsis">{user.username}</div>
                                         {user.deletedAt && (
                                             <span className="mt-1 inline-flex items-center rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-600 border border-red-500/20">
-                                                {t('deleted')}
+                                                {t('status_deleted')}
                                             </span>
                                         )}
                                     </td>
