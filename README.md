@@ -1,6 +1,6 @@
 # Project Track Base 📦
 
-**Project Track Base**, lojistik, envanter yönetimi ve raporlama süreçlerini dijitalleştirmek için tasarlanmış, Next.js 15 ve Yapay Zeka destekli modern bir web uygulamasıdır.
+**Project Track Base**, lojistik, envanter yönetimi ve raporlama süreçlerini dijitalleştirmek için tasarlanmış, Next.js 15 ve Yapay Zeka destekli modern bir kurumsal web uygulamasıdır.
 
 ![Dashboard Preview](https://via.placeholder.com/1200x600?text=Project+Track+Base+Dashboard)
 
@@ -13,18 +13,23 @@
 
 ### 📦 Envanter Yönetimi
 - **Detaylı Stok Takibi:** Malzeme referansı, firma ve stok miktarı bazında listeleme.
-- **Hareket Geçmişi:** Her bir materyalin giriş-çıkış hareketlerinin tarihçesi.
+- **Sezgisel Arama (Intuitive Search):** İrsaliye no veya not gibi geçmiş veriler arandığında, ilgili tarihi tespit edip o kaydın bulunduğu satıra otomatik odaklanma ve vurgulama (Highlight).
+- **Hareket Geçmişi:** Her bir materyalin giriş-çıkış hareketlerinin tarihçesi (Tarih ve Saat detaylı).
 - **Kritik Stok Uyarıları:** Belirlenen eşiğin altına düşen ürünler için otomatik bildirimler.
-- **Hızlı Ekleme:** Yeni materyal ve stok girişleri için optimize edilmiş formlar.
+
+### 🛡️ Güvenlik & RBAC (Role Tabanlı Erişim)
+- **Granüler Yetkilendirme:** `inventory.create`, `inventory.delete`, `users.manage` gibi ince ayarlı izin sistemi.
+- **Dinamik Rol Yönetimi:** Admin (Project Owner) paneli üzerinden rollere anlık yetki tanımlama/kaldırma.
+- **Güvenli Silme:** Project Owner onayı veya yetkisi ile stok hareketlerini silme ve geri alma korumaları.
+- **Güvenli Kimlik Doğrulama:** NextAuth.js ile şifreli, session tabanlı giriş sistemi.
+
+### 🌍 Çoklu Dil Desteği (I18n)
+- **Tam Lokalizasyon:** Türkçe (TR) ve İngilizce (EN) tam destek.
+- **Dinamik Dil Geçişi:** Arayüz üzerinden anlık dil değiştirme ve kullanıcı tercihinin hatırlanması.
 
 ### 🤖 Intra Arc (AI Asistanı)
 - **Google Gemini Entegrasyonu:** Doğal dil işleme ile stok verilerini sorgulama.
 - **Akıllı Analiz:** "Hangi ürün kritik seviyede?", "En son hangi firma işlem yaptı?" gibi sorulara anlık yanıtlar.
-
-### 🔐 Güvenlik & Yönetim
-- **Role Dayalı Erişim:** Kullanıcı yetkilendirmeleri (Admin/User).
-- **Güvenli Kimlik Doğrulama:** NextAuth.js ile şifreli giriş sistemi.
-- **Ayarlar:** Profil yönetimi ve tema (Light/Dark) tercihleri.
 
 ---
 
@@ -37,15 +42,14 @@ inventory-app/
 │   ├── 📂 dashboard/        # Ana yönetim paneli sayfaları
 │   │   ├── 📂 inventory/    # Stok listesi ve detay sayfaları
 │   │   ├── 📂 reports/      # Raporlama ekranları
-│   │   └── 📂 settings/     # Kullanıcı ve uygulama ayarları
+│   │   └── 📂 users/        # Kullanıcı ve Rol yönetimi (RBAC)
 │   └── 📂 login/            # Giriş sayfası
 ├── 📂 components/           # Yeniden kullanılabilir UI bileşenleri
-│   ├── 📂 ai/               # AI chatbot bileşenleri
-│   └── ...                  # İkonlar, tablolar, modallar
-├── 📂 lib/                  # Yardımcı fonksiyonlar ve yapılandırmalar
+├── 📂 lib/                  # Yardımcı fonksiyonlar, DB ve Auth yapılandırmaları
 │   ├── db.ts               # Prisma veritabanı istemcisi
-│   └── ai/                 # Gemini AI istemcisi
-├── 📂 prisma/               # Veritabanı şeması ve seed dosyaları
+│   ├── permissions.ts      # RBAC yetki kontrol mekanizması
+│   └── i18n.ts             # Çeviri sözlükleri ve yapılandırması
+├── 📂 prisma/               # Veritabanı şeması (Schema)
 └── 📂 public/               # Statik dosyalar
 ```
 
@@ -61,6 +65,7 @@ inventory-app/
 | **Veritabanı** | PostgreSQL (Supabase) | Ölçeklenebilir ve güvenli veritabanı |
 | **ORM** | Prisma | Veritabanı yönetimi ve tip güvenli sorgular |
 | **Auth** | NextAuth.js | Güvenli kimlik doğrulama çözümü |
+| **I18n** | React Context | Hafif ve performanslı, client-side çeviri yönetimi |
 | **AI** | Google Gemini | Üretken yapay zeka entegrasyonu |
 
 ---
@@ -69,7 +74,7 @@ inventory-app/
 
 1. **Repoyu Klonlayın**
    ```bash
-   git clone https://github.com/kullaniciadi/inventory-app.git
+   git clone https://github.com/iwallplace/Track-Base.git
    cd inventory-app
    ```
 
@@ -79,20 +84,7 @@ inventory-app/
    ```
 
 3. **Çevresel Değişkenleri (.env) Ayarlayın**
-   `.env` dosyasını oluşturun ve aşağıdaki değerleri (kendi production ortamınıza göre) güncelleyin:
-
-   ```bash
-   # Veritabanı (Supabase PostgreSQL)
-   DATABASE_URL="postgres://..."
-   POSTGRES_PRISMA_URL="postgres://..."
-
-   # NextAuth Ayarları
-   NEXTAUTH_SECRET="gizli-anahtariniz-buraya"
-   NEXTAUTH_URL="http://localhost:3000"
-
-   # Google Gemini AI API Anahtarı
-   GEMINI_API_KEY="AIzaSy..."
-   ```
+   `.env` dosyasını oluşturun ve veritabanı, auth secret gibi değerleri girin.
 
 4. **Veritabanını Oluşturun**
    ```bash
@@ -103,25 +95,9 @@ inventory-app/
    ```bash
    npm run dev
    ```
-   Uygulama `http://localhost:3000` adresinde çalışacaktır.
 
 ---
 
-## 🧪 Geliştirme Komutları
-
-- `npm run dev`: Geliştirme sunucusunu başlatır.
-- `npm run build`: Production için build alır.
-- `npm run start`: Build alınmış uygulamayı başlatır.
-- `npx prisma studio`: Veritabanını görsel arayüzle yönetmenizi sağlar.
-
-## 🤝 Katkıda Bulunma
-
-1. Bu repoyu fork'layın.
-2. Yeni bir feature branch oluşturun (`git checkout -b feature/yeni-ozellik`).
-3. Değişikliklerinizi commit'leyin (`git commit -m 'Yeni özellik eklendi'`).
-4. Branch'inizi push'layın (`git push origin feature/yeni-ozellik`).
-5. Bir Pull Request oluşturun.
-
 ## 📄 Lisans
 
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır. All rights reserved © 2026.
