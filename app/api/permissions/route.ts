@@ -48,7 +48,18 @@ export async function GET() {
 
         for (const p of permissions) {
             if (!grouped[p.role]) grouped[p.role] = {};
-            grouped[p.role][p.permission] = p.granted;
+            // Force ADMIN to always be true in UI to match backend logic
+            if (p.role === 'ADMIN') {
+                grouped[p.role][p.permission] = true;
+            } else {
+                grouped[p.role][p.permission] = p.granted;
+            }
+        }
+
+        // Ensure all known permissions are present for ADMIN as true even if missing in DB
+        if (!grouped['ADMIN']) grouped['ADMIN'] = {};
+        for (const key of Object.keys(PERMISSION_LABELS)) {
+            grouped['ADMIN'][key] = true;
         }
 
         return successResponse({
