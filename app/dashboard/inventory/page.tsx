@@ -155,10 +155,11 @@ export default function DashboardPage() {
     const handleExport = async () => {
         try {
             const params = new URLSearchParams({
-                page: '1',
-                limit: '-1',
+                // page: '1',  <-- Not needed for limit=-1, but keeps API happy
+                limit: '-1', // Fetch ALL records
                 search: searchTerm,
                 status: statusFilter !== 'ALL' ? statusFilter : '',
+                // view: 'summary' <-- REMOVED: We want RAW history data for grouping
             });
 
             if (dateRange) {
@@ -170,6 +171,9 @@ export default function DashboardPage() {
             if (!res.ok) throw new Error('Export failed');
 
             const response = await res.json();
+            // API returns { data: [...] } or { items: [...] } depending on structure. 
+            // Our API for raw list returns array directly or inside items?
+            // Let's check api/inventory/route.ts -> It returns { items: [...], pagination: ... } for non-summary view too.
             const data = response.data?.items || (response.data && Array.isArray(response.data) ? response.data : []) || response.items || [];
 
             if (!data.length) {
@@ -177,29 +181,10 @@ export default function DashboardPage() {
                 return;
             }
 
-            // Convert to CSV
-            const headers = [t('col_date'), t('col_company'), t('col_waybill'), t('col_reference'), t('col_last_action'), t('col_stock'), t('col_note')];
-            const csvContent = [
-                headers.join(','),
-                ...data.map((item: InventoryItem) => [
-                    new Date(item.date).toLocaleDateString(),
-                    `"${item.company}"`,
-                    `"${item.waybillNo}"`,
-                    `"${item.materialReference}"`,
-                    item.lastAction,
-                    item.stockCount,
-                    `"${item.note}"`
-                ].join(','))
-            ].join('\n');
+            // Use the new Excel Export Utility
+            const { exportToExcel } = await import('@/lib/excel-export');
+            await exportToExcel(data);
 
-            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `inventory_full_export_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
             showToast(t('success'), 'success');
         } catch (error) {
             console.error(error);
