@@ -86,6 +86,7 @@ export const translations = {
         confirm_delete: 'Silmek istediğinize emin misiniz?',
         success: 'İşlem başarılı',
         error: 'Hata oluştu',
+        status_deleted: 'Silindi',
 
         // Inventory Page
         inventory_title: 'Malzeme Stok Takibi',
@@ -295,6 +296,7 @@ export const translations = {
         confirm_delete_message: 'Are you sure you want to delete this record? This action cannot be undone.',
         success: 'Operation successful',
         error: 'An error occurred',
+        status_deleted: 'Deleted',
         search_placeholder: 'Search...',
         records: 'records',
 
