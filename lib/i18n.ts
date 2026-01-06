@@ -123,6 +123,9 @@ export const translations = {
         // Reports
         reports_title: 'Raporlar',
         no_results: 'Sonuç bulunamadı.',
+        show_deleted: 'Silinenleri Göster (Admin)',
+        hide_deleted: 'Silinenleri Gizle',
+        show_deleted_tooltip: 'Sadece yetkili kullanıcılar sildiği kayıtları görebilir.',
         reports_desc: 'Genel bakış ve performans analizleri',
         ai_summary_title: 'Yönetici Özeti (AI Analizi)',
         ai_summary_button: 'Yönetici Özeti (AI)',
@@ -163,7 +166,7 @@ export const translations = {
         personal_info: 'Kişisel Bilgiler',
         change_password: 'Şifre Değiştir',
         current_password: 'Mevcut Şifre',
-        new_password: 'Yeni Şifre',
+
         new_password_again: 'Yeni Şifre (Tekrar)',
         save_changes: 'Değişiklikleri Kaydet',
         saving: 'Kaydediliyor...',
@@ -304,6 +307,9 @@ export const translations = {
         // Reports
         reports_title: 'Reports',
         no_results: 'No results found.',
+        show_deleted: 'Show Deleted (Admin)',
+        hide_deleted: 'Hide Deleted',
+        show_deleted_tooltip: 'Only admins can view deleted records.',
         reports_desc: 'Overview and performance analysis',
         ai_summary_title: 'Executive Summary (AI Analysis)',
         ai_summary_button: 'Executive Summary (AI)',
@@ -344,7 +350,7 @@ export const translations = {
         personal_info: 'Personal Information',
         change_password: 'Change Password',
         current_password: 'Current Password',
-        new_password: 'New Password',
+
         new_password_again: 'New Password (Again)',
         save_changes: 'Save Changes',
         saving: 'Saving...',

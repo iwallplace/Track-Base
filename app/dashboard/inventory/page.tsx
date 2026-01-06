@@ -49,6 +49,7 @@ export default function DashboardPage() {
     const { data: session } = useSession();
     const [canDelete, setCanDelete] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
+    const [showDeleted, setShowDeleted] = useState(false);
 
     const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -68,11 +69,12 @@ export default function DashboardPage() {
         try {
             setLoading(true);
             const params = new URLSearchParams({
-                view: 'summary', // Force summary view
+                view: showDeleted ? 'raw' : 'summary', // Force raw view for deleted items
                 page: currentPage.toString(),
                 limit: pageSize.toString(),
                 search: searchTerm,
                 status: statusFilter !== 'ALL' ? statusFilter : '',
+                showDeleted: showDeleted.toString()
             });
 
             if (dateRange) {
@@ -102,7 +104,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchItems();
-    }, [currentPage, pageSize, searchTerm, statusFilter, dateRange]);
+    }, [currentPage, pageSize, searchTerm, statusFilter, dateRange, showDeleted]);
 
     useEffect(() => {
         const checkPermission = async () => {
@@ -333,6 +335,21 @@ export default function DashboardPage() {
                         <RefreshCw className="h-4 w-4" />
                         {t('cancel')}
                     </button>
+
+                    {/* Admin Only: Show Deleted Items Toggle */}
+                    {session?.user?.role === 'ADMIN' && (
+                        <button
+                            onClick={() => setShowDeleted(!showDeleted)}
+                            className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${showDeleted
+                                ? 'bg-red-500/10 border-red-500/50 text-red-600'
+                                : 'border-input bg-background text-muted-foreground hover:bg-accent'
+                                }`}
+                            title={t('show_deleted_tooltip')}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {showDeleted ? t('hide_deleted') : t('show_deleted')}
+                        </button>
+                    )}
                 </div>
             </div>
 

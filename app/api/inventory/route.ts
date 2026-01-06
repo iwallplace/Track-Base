@@ -48,8 +48,26 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // New: Show Deleted Toggle
+    const showDeleted = searchParams.get('showDeleted') === 'true';
+
     try {
-        const baseWhere: any = { deletedAt: null }; // Soft Delete Filter
+        const baseWhere: any = {};
+
+        // Base Filter: Handle Soft Delete Logic
+        if (showDeleted) {
+            // Permission Check for viewing deleted items
+            if (session.user.role !== 'ADMIN') {
+                // Non-admins cannot see deleted items even if they ask
+                baseWhere.deletedAt = null;
+            } else {
+                // Admin asked for deleted items: Show deleted items
+                baseWhere.deletedAt = { not: null };
+            }
+        } else {
+            // Default behavior: Hide deleted
+            baseWhere.deletedAt = null;
+        }
 
         if (search) {
             baseWhere.OR = [
@@ -68,7 +86,7 @@ export async function GET(req: Request) {
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
             baseWhere.date = { gte: start, lte: end };
-        } else if (dateFilter === 'this_week' && !search && view !== 'summary') {
+        } else if (dateFilter === 'this_week' && !search && view !== 'summary' && !showDeleted) {
             const now = new Date();
             const dayOfWeek = now.getDay();
             const diffToMonday = (dayOfWeek + 6) % 7;
@@ -81,7 +99,7 @@ export async function GET(req: Request) {
             baseWhere.date = { gte: startOfWeek, lte: endOfWeek };
         }
 
-        if (view === 'summary') {
+        if (view === 'summary' && !showDeleted) {
             // 1. Separate Status from baseWhere for initial fetch
             const queryWhere = { ...baseWhere };
             delete queryWhere.lastAction;
@@ -173,6 +191,7 @@ export async function GET(req: Request) {
             });
         }
 
+        // Standard List View (Raw Data)
         const [inventory, total] = await prisma.$transaction([
             prisma.inventoryItem.findMany({
                 where: baseWhere,
