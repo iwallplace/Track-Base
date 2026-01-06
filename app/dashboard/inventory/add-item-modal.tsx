@@ -9,9 +9,15 @@ interface AddItemModalProps {
     onClose: () => void;
     onSuccess: () => void;
     mode: 'Giriş' | 'Çıkış';
+    initialData?: {
+        company?: string;
+        waybillNo?: string;
+        materialReference?: string;
+        note?: string;
+    } | null;
 }
 
-export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddItemModalProps) {
+export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initialData }: AddItemModalProps) {
     const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<{
@@ -33,12 +39,16 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode }: AddIt
     // Reset/Update form when mode changes or modal opens
     useEffect(() => {
         if (isOpen) {
-            setFormData(prev => ({
-                ...prev,
-                lastAction: mode
-            }));
+            setFormData({
+                company: initialData?.company || '',
+                waybillNo: initialData?.waybillNo || '',
+                materialReference: initialData?.materialReference || '',
+                stockCount: '', // Always reset stock count for safety
+                lastAction: mode,
+                note: initialData?.note || ''
+            });
         }
-    }, [isOpen, mode]);
+    }, [isOpen, mode, initialData]);
 
     if (!isOpen) return null;
 

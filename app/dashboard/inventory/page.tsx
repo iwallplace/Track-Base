@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2, RotateCcw } from 'lucide-react';
+import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2, RotateCcw, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
 import DateRangePicker from '@/components/date-range-picker';
@@ -50,6 +50,7 @@ export default function DashboardPage() {
     const [canDelete, setCanDelete] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
     const [showDeleted, setShowDeleted] = useState(false);
+    const [modalInitialData, setModalInitialData] = useState<any>(null);
 
     const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -223,6 +224,7 @@ export default function DashboardPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={fetchItems}
                 mode={modalMode}
+                initialData={modalInitialData}
             />
 
             {/* Header Section */}
@@ -242,6 +244,7 @@ export default function DashboardPage() {
                     <button
                         onClick={() => {
                             setModalMode('Giriş');
+                            setModalInitialData(null);
                             setIsModalOpen(true);
                         }}
                         className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
@@ -252,6 +255,7 @@ export default function DashboardPage() {
                     <button
                         onClick={() => {
                             setModalMode('Çıkış');
+                            setModalInitialData(null);
                             setIsModalOpen(true);
                         }}
                         className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
@@ -366,6 +370,7 @@ export default function DashboardPage() {
                                 <th className="px-6 py-4 font-medium text-right text-blue-600">{t('col_stock')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_last_action')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_note')}</th>
+                                <th className="px-6 py-4 font-medium w-24 text-center">Hızlı İşlem</th>
                                 {canDelete && <th className="px-6 py-4 font-medium w-10"></th>}
                             </tr>
                         </thead>
@@ -416,6 +421,46 @@ export default function DashboardPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">{item.note}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        {!showDeleted && (
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setModalMode('Giriş');
+                                                        setModalInitialData({
+                                                            company: item.company,
+                                                            waybillNo: item.waybillNo,
+                                                            materialReference: item.materialReference,
+                                                            note: item.note
+                                                        });
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                    className="p-1.5 rounded-md hover:bg-emerald-500/10 text-emerald-600 transition-colors"
+                                                    title="Hızlı Giriş Ekle"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setModalMode('Çıkış');
+                                                        setModalInitialData({
+                                                            company: item.company,
+                                                            waybillNo: item.waybillNo,
+                                                            materialReference: item.materialReference,
+                                                            note: item.note
+                                                        });
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                    className="p-1.5 rounded-md hover:bg-red-500/10 text-red-600 transition-colors"
+                                                    title="Hızlı Çıkış Ekle"
+                                                >
+                                                    <Minus className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </td>
                                     {canDelete && (
                                         <td className="px-6 py-4 text-right">
                                             {showDeleted ? (
