@@ -13,6 +13,7 @@ import {
     notFoundResponse,
     devError
 } from "@/lib/api-response";
+import { createAuditLog } from "@/lib/audit";
 
 const ALLOWED_ROLES = ['ADMIN', 'IME', 'KALITE'];
 
@@ -70,6 +71,14 @@ export async function POST(req: Request) {
             select: { id: true, name: true, username: true, role: true, createdAt: true }
         });
 
+        await createAuditLog(
+            session.user.id,
+            "CREATE",
+            "USER",
+            user.id,
+            { username: user.username, role: user.role }
+        );
+
         return successResponse(user, "Kullanıcı oluşturuldu", 201);
     } catch (error) {
         devError("Users POST Error:", error);
@@ -102,7 +111,16 @@ export async function DELETE(req: Request) {
             return forbiddenResponse("Project Owner silinemez");
         }
 
-        await prisma.user.delete({ where: { id } });
+        const deletedUser = await prisma.user.delete({ where: { id } });
+
+        await createAuditLog(
+            session.user.id,
+            "DELETE",
+            "USER",
+            id,
+            { deletedUsername: deletedUser.username }
+        );
+
         return successResponse(undefined, "Kullanıcı silindi");
     } catch (error) {
         devError("Users DELETE Error:", error);
@@ -158,6 +176,14 @@ export async function PUT(req: Request) {
             data: updateData,
             select: { id: true, name: true, username: true, role: true, createdAt: true }
         });
+
+        await createAuditLog(
+            session.user.id,
+            "UPDATE",
+            "USER",
+            updatedUser.id,
+            { changedFields: Object.keys(updateData) }
+        );
 
         return successResponse(updatedUser, "Kullanıcı güncellendi");
     } catch (error) {

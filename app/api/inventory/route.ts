@@ -12,6 +12,7 @@ import {
     devError
 } from "@/lib/api-response";
 import { hasPermission } from "@/lib/permissions";
+import { createAuditLog } from "@/lib/audit";
 
 interface InventorySummary {
     id: string;
@@ -313,7 +314,13 @@ export async function POST(req: Request) {
         });
 
         // Audit Log
-        console.log(`[AUDIT] Inventory Action (${data.lastAction}): ${data.materialReference} | Qt: ${data.stockCount} | User: ${session.user.name} (${session.user.id})`);
+        await createAuditLog(
+            session.user.id,
+            "CREATE",
+            "INVENTORY",
+            item.id,
+            { materialReference: data.materialReference, stockCount: data.stockCount, action: data.lastAction }
+        );
 
         return successResponse(item, "Envanter kaydı oluşturuldu");
     } catch (error) {
@@ -343,6 +350,14 @@ export async function DELETE(req: Request) {
         await prisma.inventoryItem.delete({
             where: { id }
         });
+
+        await createAuditLog(
+            session.user.id,
+            "DELETE",
+            "INVENTORY",
+            id,
+            { id }
+        );
 
         return successResponse(undefined, "Kayıt silindi");
     } catch (error) {

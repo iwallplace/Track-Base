@@ -20,6 +20,7 @@ model User {
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  auditLogs        AuditLog[]
 }
 
 model InventoryItem {
@@ -56,4 +57,21 @@ model RolePermission {
   updatedAt  DateTime @updatedAt
 
   @@unique([role, permission])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CREATE, UPDATE, DELETE, LOGIN
+  entity    String   // Inventory, User, System
+  entityId  String?
+  userId    String
+  details   String?  // JSON string
+  createdAt DateTime @default(now())
+
+  // Relation
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
 }
