@@ -109,7 +109,7 @@ export default function MaterialSettingsModal({ isOpen, onClose }: MaterialSetti
                                     <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                                         Kayıt bulunamadı. Veritabanına yeni malzeme eklendikçe burada görünecektir.
                                         <br />
-                                        <span className="text-xs italic">(Henüz veritabanında "Material" kaydı yoksa, stok hareketlerinden otomatik oluşturulmaz. Manuel eklemelisiniz.)</span>
+                                        <span className="text-xs italic">(Henüz veritabanında &quot;Material&quot; kaydı yoksa, stok hareketlerinden otomatik oluşturulmaz. Manuel eklemelisiniz.)</span>
                                     </td>
                                 </tr>
                             )}
