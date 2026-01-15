@@ -76,6 +76,11 @@ export async function POST(req: Request) {
             return errorResponse("Referans ve Kritik Stok değeri gereklidir", 400);
         }
 
+        // Validate: minStock cannot be negative
+        if (minStock < 0) {
+            return errorResponse("Kritik stok değeri negatif olamaz", 400);
+        }
+
         // Upsert: Update if exists, Create if not
         const material = await prisma.material.upsert({
             where: { reference },

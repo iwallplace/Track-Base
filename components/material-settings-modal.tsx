@@ -135,9 +135,11 @@ function MaterialRow({ material, onUpdate }: { material: Material, onUpdate: (re
             <td className="px-4 py-3">
                 <input
                     type="number"
+                    min="0"
                     value={limit}
                     onChange={(e) => {
-                        setLimit(Number(e.target.value));
+                        const val = Math.max(0, Number(e.target.value));
+                        setLimit(val);
                         setIsDirty(true);
                     }}
                     className="w-20 rounded border border-input bg-background px-2 py-1 text-center"
