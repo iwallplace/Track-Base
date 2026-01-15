@@ -2,20 +2,33 @@
 
 **Project Track Base**, lojistik, envanter yönetimi ve raporlama süreçlerini dijitalleştirmek için tasarlanmış, Next.js 15 ve Yapay Zeka destekli modern bir kurumsal web uygulamasıdır.
 
-![Dashboard Preview](https://via.placeholder.com/1200x600?text=Project+Track+Base+Dashboard)
+
 
 ## ✨ Özellikler
 
 ### 📊 Dashboard & Raporlama
+![Dashboard Preview](/public/screenshots/dashboard-reports.png)
 - **KPI Kartları:** Toplam stok, aktif firmalar ve kritik ürünler gibi önemli metriklerin anlık takibi.
 - **Dinamik Grafikler:** Zaman aralığına göre filtrelenebilir satış ve stok hareket grafikleri.
 - **Tarih Filtreleme:** Özelleştirilebilir tarih aralıkları ile raporları detaylandırma.
 
 ### 📦 Envanter Yönetimi
+![Inventory List](/public/screenshots/inventory-list.png)
 - **Detaylı Stok Takibi:** Malzeme referansı, firma ve stok miktarı bazında listeleme.
 - **Sezgisel Arama (Intuitive Search):** İrsaliye no veya not gibi geçmiş veriler arandığında, ilgili tarihi tespit edip o kaydın bulunduğu satıra otomatik odaklanma ve vurgulama (Highlight).
 - **Hareket Geçmişi:** Her bir materyalin giriş-çıkış hareketlerinin tarihçesi (Tarih ve Saat detaylı).
 - **Kritik Stok Uyarıları:** Belirlenen eşiğin altına düşen ürünler için otomatik bildirimler.
+
+### 🔢 Stok Sayım Modülü
+![Stock Count](/public/screenshots/stock-count.png)
+- **Anlık Karşılaştırma:** Fiziksel sayım ile sistem stoğunu anında karşılaştırır.
+- **Kör Sayım (Blind Count):** Personelin sistem stoğunu görmeden sayım yapmasını sağlayan mod.
+- **Fark Raporlama:** Eşleşmeyen kalemleri otomatik olarak raporlar ve PDF/XLS olarak dışa aktarır.
+
+### 📱 Mobil Uyumluluk
+<img src="/public/screenshots/mobile-view.png" width="300" alt="Mobile View" />
+- **Responsive Tasarım:** Tüm tablet ve telefonlarda tam uyumlu arayüz.
+- **Mobil Odaklı Menü:** Kolay erişilebilir navigasyon ve dokunmatik dostu butonlar.
 
 ### 🛡️ Güvenlik & RBAC (Role Tabanlı Erişim)
 - **Granüler Yetkilendirme:** `inventory.create`, `inventory.delete`, `users.manage` gibi ince ayarlı izin sistemi.
