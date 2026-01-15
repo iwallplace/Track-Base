@@ -27,6 +27,7 @@ const PERMISSION_LABELS: Record<string, string> = {
     'users.edit': 'Kullanıcı düzenleme',
     'users.delete': 'Kullanıcı silme',
     'users.role.change': 'Kullanıcı rolü değiştirme',
+    'roles.manage': 'Rol oluşturma ve silme',
 
     // Sistem Ayarları
     'settings.view': 'Ayarları görüntüleme',
@@ -78,10 +79,16 @@ export async function GET() {
             grouped['ADMIN'][key] = true;
         }
 
+        const dbRoles = await prisma.role.findMany();
+        const roleLabels: Record<string, string> = {};
+        dbRoles.forEach(r => {
+            roleLabels[r.name] = r.label;
+        });
+
         return successResponse({
             permissions: grouped,
             labels: PERMISSION_LABELS,
-            roleLabels: ROLE_LABELS
+            roleLabels: roleLabels
         });
     } catch (error) {
         devError("Permissions GET Error:", error);

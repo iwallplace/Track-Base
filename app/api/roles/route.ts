@@ -31,9 +31,10 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return unauthorizedResponse();
 
-    // Only Admin can create roles
-    if (session.user.role !== 'ADMIN') {
-        return forbiddenResponse("Sadece Project Owner rol oluşturabilir");
+    // Check Permission
+    const canManageRoles = await hasPermission(session.user.role || 'USER', 'roles.manage');
+    if (!canManageRoles) {
+        return forbiddenResponse("Rol yönetimi yetkiniz yok");
     }
 
     try {
@@ -72,8 +73,9 @@ export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return unauthorizedResponse();
 
-    if (session.user.role !== 'ADMIN') {
-        return forbiddenResponse("Sadece Project Owner rol silebilir");
+    const canManageRoles = await hasPermission(session.user.role || 'USER', 'roles.manage');
+    if (!canManageRoles) {
+        return forbiddenResponse("Rol yönetimi yetkiniz yok");
     }
 
     const { searchParams } = new URL(req.url);
@@ -86,8 +88,9 @@ export async function DELETE(req: Request) {
 
         if (!role) return errorResponse("Rol bulunamadı", 404);
 
-        if (role.isSystem) {
-            return forbiddenResponse("Sistem rolleri silinemez");
+        // Security: Never allow deleting the 'ADMIN' role validation logic
+        if (role.name === 'ADMIN') {
+            return forbiddenResponse("ADMIN (Project Owner) rolü silinemez.");
         }
 
         // Check if role is in use
