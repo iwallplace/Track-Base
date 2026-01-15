@@ -43,6 +43,17 @@ export default function StockCountPage() {
     const [countDate, setCountDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [savingItem, setSavingItem] = useState<string | null>(null);
 
+    // New States for History View
+    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+    const [historySessions, setHistorySessions] = useState<any[]>([]);
+
+    // History Logic
+    useEffect(() => {
+        if (activeTab === 'history') {
+            loadHistory();
+        }
+    }, [activeTab]);
+
     // Initial load check
     useEffect(() => {
         if (session && countDate) {
@@ -175,6 +186,27 @@ export default function StockCountPage() {
         } finally {
             setSavingItem(null);
         }
+    };
+
+    const loadHistory = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/stock-count/session?mode=history');
+            if (res.ok) {
+                const data = await res.json();
+                setHistorySessions(data);
+            }
+        } catch (error) {
+            console.error("History load error:", error);
+            showToast('Geçmiş yüklenemedi', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleHistoryClick = (dateStr: string) => {
+        setCountDate(format(new Date(dateStr), 'yyyy-MM-dd'));
+        setActiveTab('active');
     };
 
     const handleCountChange = (id: string, value: string) => {
@@ -370,317 +402,409 @@ export default function StockCountPage() {
                     <h2 className="text-2xl font-bold text-foreground">Stok Sayım Modülü</h2>
                     <p className="text-muted-foreground">Fiziksel sayım ve sistem karşılaştırması</p>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <input
-                        type="date"
-                        value={countDate}
-                        onChange={(e) => setCountDate(e.target.value)}
-                        className="px-3 py-2 text-sm rounded-lg border border-border bg-background"
-                    />
 
-                    {sessionStatus === 'ACTIVE' && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium border border-emerald-500/20">
-                            <Cloud className="h-3 w-3" />
-                            <span>Oturum Aktif</span>
-                        </div>
-                    )}
+                {/* View Tabs */}
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                    <button
+                        onClick={() => setActiveTab('active')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'active'
+                            ? 'bg-background shadow-sm text-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                    >
+                        Aktif / Günlük Sayım
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history'
+                            ? 'bg-background shadow-sm text-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                    >
+                        Sayım Geçmişi (Liste)
+                    </button>
                 </div>
+
+                {/* Only show date picker in active mode */}
+                {activeTab === 'active' && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                            type="date"
+                            value={countDate}
+                            onChange={(e) => setCountDate(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg border border-border bg-background"
+                        />
+
+                        {sessionStatus === 'ACTIVE' && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium border border-emerald-500/20">
+                                <Cloud className="h-3 w-3" />
+                                <span>Oturum Aktif</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* Session Starter */}
-            {sessionStatus === 'NOT_STARTED' && (
-                <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-xl shadow-sm text-center">
-                    <div className="p-4 rounded-full bg-blue-500/10 mb-4">
-                        <Clock className="h-8 w-8 text-blue-500" />
-                    </div>
+            {/* Content Switch */}
+            {activeTab === 'history' ? (
+                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
+                            <tr>
+                                <th className="px-6 py-4 font-medium">Tarih</th>
+                                <th className="px-6 py-4 font-medium">Kullanıcı</th>
+                                <th className="px-6 py-4 font-medium text-center">Toplam Kalem</th>
+                                <th className="px-6 py-4 font-medium text-center">Farklı Kalem</th>
+                                <th className="px-6 py-4 font-medium text-center">Durum</th>
+                                <th className="px-6 py-4 font-medium text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {loading && historySessions.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                        <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                        Geçmiş yükleniyor...
+                                    </td>
+                                </tr>
+                            ) : historySessions.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                        Henüz tamamlanmış bir sayım kaydı yok.
+                                    </td>
+                                </tr>
+                            ) : (
+                                historySessions.map((session) => (
+                                    <tr key={session.id} className="hover:bg-muted/50 transition-colors">
+                                        <td className="px-6 py-4 font-medium">{format(new Date(session.date), 'dd MMMM yyyy', { locale: tr })}</td>
+                                        <td className="px-6 py-4 text-muted-foreground">{session.user}</td>
+                                        <td className="px-6 py-4 text-center font-mono">{session.totalItems}</td>
+                                        <td className="px-6 py-4 text-center font-mono font-bold">
+                                            {session.mismatchCount > 0 ? (
+                                                <span className="text-red-600">{session.mismatchCount}</span>
+                                            ) : (
+                                                <span className="text-emerald-600">0</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                                                }`}>
+                                                {session.status === 'COMPLETED' ? 'Tamamlandı' : 'Devam Ediyor'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button
+                                                onClick={() => handleHistoryClick(session.date)}
+                                                className="text-blue-600 hover:underline text-xs flex items-center justify-end gap-1 ml-auto"
+                                            >
+                                                Detay Gör <Search className="h-3 w-3" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                /* EXISTING ACTIVE SESSION VIEW */
+                <>
+                    {/* Session Starter */}
+                    {sessionStatus === 'NOT_STARTED' && (
+                        <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-xl shadow-sm text-center">
+                            <div className="p-4 rounded-full bg-blue-500/10 mb-4">
+                                <Clock className="h-8 w-8 text-blue-500" />
+                            </div>
 
-                    {/* Check if selected date is today */}
-                    {format(new Date(), 'yyyy-MM-dd') === countDate ? (
+                            {/* Check if selected date is today */}
+                            {format(new Date(), 'yyyy-MM-dd') === countDate ? (
+                                <>
+                                    <h3 className="text-xl font-bold mb-2">Sayım Oturumu Başlatın</h3>
+                                    <p className="text-muted-foreground max-w-md mb-6">
+                                        Seçili tarih ({format(new Date(countDate), 'dd.MM.yyyy')}) için henüz bir sayım oturumu başlatılmamış.
+                                        Başlamak için aşağıdaki butona tıklayın.
+                                    </p>
+                                    <button
+                                        onClick={startSession}
+                                        disabled={loading}
+                                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                    >
+                                        {loading ? 'Başlatılıyor...' : (
+                                            <>
+                                                <PlayCircle className="h-5 w-5" />
+                                                Sayımı Başlat
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-xl font-bold mb-2 text-muted-foreground">Kayıt Bulunamadı</h3>
+                                    <p className="text-muted-foreground max-w-md">
+                                        {format(new Date(countDate), 'dd.MM.yyyy')} tarihinde yapılmış bir sayım kaydı bulunmamaktadır.
+                                        <br />
+                                        <span className="text-amber-600 font-medium text-sm mt-2 block">
+                                            <AlertTriangle className="h-3 w-3 inline-block mr-1" />
+                                            Yeni sayım sadece bugünün tarihi ile başlatılabilir.
+                                        </span>
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Active Session UI */}
+                    {sessionStatus === 'ACTIVE' && (
                         <>
-                            <h3 className="text-xl font-bold mb-2">Sayım Oturumu Başlatın</h3>
-                            <p className="text-muted-foreground max-w-md mb-6">
-                                Seçili tarih ({format(new Date(countDate), 'dd.MM.yyyy')}) için henüz bir sayım oturumu başlatılmamış.
-                                Başlamak için aşağıdaki butona tıklayın.
-                            </p>
-                            <button
-                                onClick={startSession}
-                                disabled={loading}
-                                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
-                            >
-                                {loading ? 'Başlatılıyor...' : (
-                                    <>
-                                        <PlayCircle className="h-5 w-5" />
-                                        Sayımı Başlat
-                                    </>
-                                )}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <h3 className="text-xl font-bold mb-2 text-muted-foreground">Kayıt Bulunamadı</h3>
-                            <p className="text-muted-foreground max-w-md">
-                                {format(new Date(countDate), 'dd.MM.yyyy')} tarihinde yapılmış bir sayım kaydı bulunmamaktadır.
-                                <br />
-                                <span className="text-amber-600 font-medium text-sm mt-2 block">
-                                    <AlertTriangle className="h-3 w-3 inline-block mr-1" />
-                                    Yeni sayım sadece bugünün tarihi ile başlatılabilir.
-                                </span>
-                            </p>
+                            {/* Stats Cards - Same as before */}
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div className="rounded-xl border border-border bg-card p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-blue-500/10">
+                                            <Package className="h-5 w-5 text-blue-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                                            <p className="text-xs text-muted-foreground">Toplam</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-border bg-card p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-amber-500/10">
+                                            <Clock className="h-5 w-5 text-amber-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+                                            <p className="text-xs text-muted-foreground">Bekleyen</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-border bg-card p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                                            <CheckCircle className="h-5 w-5 text-emerald-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-foreground">{stats.match}</p>
+                                            <p className="text-xs text-muted-foreground">Eşleşen</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-border bg-card p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-red-500/10">
+                                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-foreground">{stats.mismatch}</p>
+                                            <p className="text-xs text-muted-foreground">Farklı</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-border bg-card p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-purple-500/10">
+                                            <BarChart3 className="h-5 w-5 text-purple-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-foreground">%{stats.progress}</p>
+                                            <p className="text-xs text-muted-foreground">Tamamlanan</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="rounded-xl border border-border bg-card p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-foreground">Sayım İlerlemesi</span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {items.length - stats.pending} / {items.length} sayıldı
+                                    </span>
+                                </div>
+                                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+                                        style={{ width: `${stats.progress}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Filter & Export */}
+                            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <input
+                                            type="text"
+                                            placeholder="Malzeme Referansı veya Konum Ara..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {/* Status Filter Buttons */}
+                                        <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                                            {(['ALL', 'PENDING', 'MATCH', 'MISMATCH'] as FilterStatus[]).map((status) => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => setStatusFilter(status)}
+                                                    className={`px-3 py-2 text-xs font-medium transition-colors ${statusFilter === status
+                                                        ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
+                                                            : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
+                                                                : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
+                                                                    : 'bg-blue-500/20 text-blue-600'
+                                                        : 'hover:bg-muted'
+                                                        }`}
+                                                >
+                                                    {status === 'ALL' ? 'Tümü' : status === 'PENDING' ? 'Bekleyen' : status === 'MATCH' ? 'Eşleşen' : 'Farklı'}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            onClick={exportToCSV}
+                                            disabled={stats.pending === stats.total}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                                            title="CSV olarak dışa aktar"
+                                        >
+                                            <FileSpreadsheet className="h-4 w-4" />
+                                            <span className="hidden sm:inline">CSV</span>
+                                        </button>
+
+                                        <button
+                                            onClick={exportToPDF}
+                                            disabled={stats.pending === stats.total}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 text-sm hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                                            title="PDF olarak dışa aktar"
+                                        >
+                                            <FileIcon className="h-4 w-4" />
+                                            <span className="hidden sm:inline">PDF</span>
+                                        </button>
+
+                                        <button
+                                            onClick={exportDiscrepancyReport}
+                                            disabled={stats.mismatch === 0}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-sm hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                            title="Fark raporu indir"
+                                        >
+                                            <FileText className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Fark Raporu</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Table */}
+                            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
+                                            <tr>
+                                                <th className="px-6 py-4 font-medium">Malzeme</th>
+                                                <th className="px-6 py-4 font-medium">Firma</th>
+                                                <th className="px-6 py-4 font-medium">Konum</th>
+                                                <th className="px-6 py-4 font-medium text-right">Sistem Stoğu</th>
+                                                <th className="px-6 py-4 font-medium text-right w-40">Sayım Sonucu</th>
+                                                <th className="px-6 py-4 font-medium text-center w-32">Fark</th>
+                                                <th className="px-6 py-4 font-medium w-32">Durum</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                                                        <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                                        Yükleniyor...
+                                                    </td>
+                                                </tr>
+                                            ) : filteredItems.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                                                        <Package className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                                                        Kayıt bulunamadı
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredItems.map(item => (
+                                                    <tr
+                                                        key={item.id}
+                                                        className={`hover:bg-muted/50 transition-colors ${item.status === 'MISMATCH' ? 'bg-red-500/5' :
+                                                            item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
+                                                            }`}
+                                                    >
+                                                        <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
+                                                        <td className="px-6 py-4 text-muted-foreground">{item.company || '-'}</td>
+                                                        <td className="px-6 py-4 text-muted-foreground">{item.location || '-'}</td>
+                                                        <td className="px-6 py-4 text-right font-mono text-lg font-bold">{item.systemStock}</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={item.countedStock}
+                                                                    onChange={(e) => handleCountChange(item.id, e.target.value)}
+                                                                    className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
+                                                                        item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
+                                                                            'border-input bg-background'
+                                                                        }`}
+                                                                    placeholder="0"
+                                                                />
+                                                                {item.saved && (
+                                                                    <Cloud className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-emerald-500" />
+                                                                )}
+                                                                {savingItem === item.id && (
+                                                                    <RotateCcw className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center font-mono font-bold">
+                                                            {item.status === 'MISMATCH' && (
+                                                                <span className={item.difference! > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                                                                    {item.difference! > 0 ? '+' : ''}{item.difference}
+                                                                </span>
+                                                            )}
+                                                            {item.status === 'MATCH' && <span className="text-emerald-600">0</span>}
+                                                            {item.status === 'PENDING' && <span className="text-muted-foreground">-</span>}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {item.status === 'MATCH' && (
+                                                                <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                                                                    <CheckCircle className="h-4 w-4" /> Eşleşti
+                                                                </span>
+                                                            )}
+                                                            {item.status === 'MISMATCH' && (
+                                                                <span className="inline-flex items-center gap-1 text-red-600 font-medium">
+                                                                    <AlertTriangle className="h-4 w-4" /> Fark Var
+                                                                </span>
+                                                            )}
+                                                            {item.status === 'PENDING' && (
+                                                                <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                                                                    <Clock className="h-4 w-4" /> Bekliyor
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Footer Stats */}
+                                <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                        {filteredItems.length} kayıt gösteriliyor
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                        Sayım Tarihi: {format(new Date(countDate), 'dd MMMM yyyy', { locale: tr })}
+                                    </span>
+                                </div>
+                            </div>
                         </>
                     )}
-                </div>
-            )}
-
-            {/* Active Session UI */}
-            {sessionStatus === 'ACTIVE' && (
-                <>
-                    {/* Stats Cards - Same as before */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="rounded-xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-blue-500/10">
-                                    <Package className="h-5 w-5 text-blue-500" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                                    <p className="text-xs text-muted-foreground">Toplam</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-amber-500/10">
-                                    <Clock className="h-5 w-5 text-amber-500" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-                                    <p className="text-xs text-muted-foreground">Bekleyen</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-emerald-500/10">
-                                    <CheckCircle className="h-5 w-5 text-emerald-500" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-foreground">{stats.match}</p>
-                                    <p className="text-xs text-muted-foreground">Eşleşen</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-red-500/10">
-                                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-foreground">{stats.mismatch}</p>
-                                    <p className="text-xs text-muted-foreground">Farklı</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-purple-500/10">
-                                    <BarChart3 className="h-5 w-5 text-purple-500" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold text-foreground">%{stats.progress}</p>
-                                    <p className="text-xs text-muted-foreground">Tamamlanan</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="rounded-xl border border-border bg-card p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-foreground">Sayım İlerlemesi</span>
-                            <span className="text-sm text-muted-foreground">
-                                {items.length - stats.pending} / {items.length} sayıldı
-                            </span>
-                        </div>
-                        <div className="h-3 bg-muted rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
-                                style={{ width: `${stats.progress}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Filter & Export */}
-                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Malzeme Referansı veya Konum Ara..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                {/* Status Filter Buttons */}
-                                <div className="flex items-center border border-border rounded-lg overflow-hidden">
-                                    {(['ALL', 'PENDING', 'MATCH', 'MISMATCH'] as FilterStatus[]).map((status) => (
-                                        <button
-                                            key={status}
-                                            onClick={() => setStatusFilter(status)}
-                                            className={`px-3 py-2 text-xs font-medium transition-colors ${statusFilter === status
-                                                ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
-                                                    : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
-                                                        : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
-                                                            : 'bg-blue-500/20 text-blue-600'
-                                                : 'hover:bg-muted'
-                                                }`}
-                                        >
-                                            {status === 'ALL' ? 'Tümü' : status === 'PENDING' ? 'Bekleyen' : status === 'MATCH' ? 'Eşleşen' : 'Farklı'}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <button
-                                    onClick={exportToCSV}
-                                    disabled={stats.pending === stats.total}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                                    title="CSV olarak dışa aktar"
-                                >
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                    <span className="hidden sm:inline">CSV</span>
-                                </button>
-
-                                <button
-                                    onClick={exportToPDF}
-                                    disabled={stats.pending === stats.total}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 text-sm hover:bg-blue-500/20 transition-colors disabled:opacity-50"
-                                    title="PDF olarak dışa aktar"
-                                >
-                                    <FileIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">PDF</span>
-                                </button>
-
-                                <button
-                                    onClick={exportDiscrepancyReport}
-                                    disabled={stats.mismatch === 0}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-sm hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                    title="Fark raporu indir"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Fark Raporu</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
-                                    <tr>
-                                        <th className="px-6 py-4 font-medium">Malzeme</th>
-                                        <th className="px-6 py-4 font-medium">Firma</th>
-                                        <th className="px-6 py-4 font-medium">Konum</th>
-                                        <th className="px-6 py-4 font-medium text-right">Sistem Stoğu</th>
-                                        <th className="px-6 py-4 font-medium text-right w-40">Sayım Sonucu</th>
-                                        <th className="px-6 py-4 font-medium text-center w-32">Fark</th>
-                                        <th className="px-6 py-4 font-medium w-32">Durum</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                                                <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
-                                                Yükleniyor...
-                                            </td>
-                                        </tr>
-                                    ) : filteredItems.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                                                <Package className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                                                Kayıt bulunamadı
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredItems.map(item => (
-                                            <tr
-                                                key={item.id}
-                                                className={`hover:bg-muted/50 transition-colors ${item.status === 'MISMATCH' ? 'bg-red-500/5' :
-                                                    item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
-                                                    }`}
-                                            >
-                                                <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
-                                                <td className="px-6 py-4 text-muted-foreground">{item.company || '-'}</td>
-                                                <td className="px-6 py-4 text-muted-foreground">{item.location || '-'}</td>
-                                                <td className="px-6 py-4 text-right font-mono text-lg font-bold">{item.systemStock}</td>
-                                                <td className="px-6 py-4">
-                                                    <div className="relative">
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            value={item.countedStock}
-                                                            onChange={(e) => handleCountChange(item.id, e.target.value)}
-                                                            className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
-                                                                item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
-                                                                    'border-input bg-background'
-                                                                }`}
-                                                            placeholder="0"
-                                                        />
-                                                        {item.saved && (
-                                                            <Cloud className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-emerald-500" />
-                                                        )}
-                                                        {savingItem === item.id && (
-                                                            <RotateCcw className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center font-mono font-bold">
-                                                    {item.status === 'MISMATCH' && (
-                                                        <span className={item.difference! > 0 ? 'text-emerald-600' : 'text-red-600'}>
-                                                            {item.difference! > 0 ? '+' : ''}{item.difference}
-                                                        </span>
-                                                    )}
-                                                    {item.status === 'MATCH' && <span className="text-emerald-600">0</span>}
-                                                    {item.status === 'PENDING' && <span className="text-muted-foreground">-</span>}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {item.status === 'MATCH' && (
-                                                        <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
-                                                            <CheckCircle className="h-4 w-4" /> Eşleşti
-                                                        </span>
-                                                    )}
-                                                    {item.status === 'MISMATCH' && (
-                                                        <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-                                                            <AlertTriangle className="h-4 w-4" /> Fark Var
-                                                        </span>
-                                                    )}
-                                                    {item.status === 'PENDING' && (
-                                                        <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
-                                                            <Clock className="h-4 w-4" /> Bekliyor
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        {/* Footer Stats */}
-                        <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                                {filteredItems.length} kayıt gösteriliyor
-                            </span>
-                            <span className="text-muted-foreground">
-                                Sayım Tarihi: {format(new Date(countDate), 'dd MMMM yyyy', { locale: tr })}
-                            </span>
-                        </div>
-                    </div>
                 </>
             )}
         </div>

@@ -12,6 +12,31 @@ export async function GET(req: Request) {
         }
 
         const { searchParams } = new URL(req.url);
+        const mode = searchParams.get('mode');
+
+        // History Mode: Return list of past sessions
+        if (mode === 'history') {
+            const sessions = await prisma.stockCountSession.findMany({
+                orderBy: { sessionDate: 'desc' },
+                include: {
+                    createdBy: { select: { name: true, email: true } },
+                    entries: { select: { status: true } }
+                },
+                take: 50 // Limit to last 50 sessions
+            });
+
+            const history = sessions.map(s => ({
+                id: s.id,
+                date: s.sessionDate,
+                user: s.createdBy.name || s.createdBy.email,
+                totalItems: s.entries.length,
+                mismatchCount: s.entries.filter(e => e.status === 'MISMATCH').length,
+                status: s.status
+            }));
+
+            return NextResponse.json(history);
+        }
+
         const dateParam = searchParams.get('date');
 
         // Use provided date or today
