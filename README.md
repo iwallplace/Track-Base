@@ -1,116 +1,114 @@
 # Project Track Base 📦
 
-**Project Track Base**, lojistik, envanter yönetimi ve raporlama süreçlerini dijitalleştirmek için tasarlanmış, Next.js 15 ve Yapay Zeka destekli modern bir kurumsal web uygulamasıdır.
+**Project Track Base** is a modern enterprise web application designed to digitize logistics, inventory management, and reporting processes, powered by **Next.js 15** and **Artificial Intelligence**.
 
+## ✨ Features
 
-
-## ✨ Özellikler
-
-### 📊 Dashboard & Raporlama
+### 📊 Dashboard & Reporting
 ![Dashboard Preview](/public/screenshots/dashboard-reports.png)
-- **KPI Kartları:** Toplam stok, aktif firmalar ve kritik ürünler gibi önemli metriklerin anlık takibi.
-- **Dinamik Grafikler:** Zaman aralığına göre filtrelenebilir satış ve stok hareket grafikleri.
-- **Tarih Filtreleme:** Özelleştirilebilir tarih aralıkları ile raporları detaylandırma.
+- **KPI Cards:** Instant tracking of key metrics like total stock, active companies, and critical items.
+- **Dynamic Charts:** Sales and stock movement graphs filterable by time ranges.
+- **Date Filtering:** Detailed reporting with customizable date ranges.
 
-### 📦 Envanter Yönetimi
+### 📦 Inventory Management
 ![Inventory List](/public/screenshots/inventory-list.png)
-- **Detaylı Stok Takibi:** Malzeme referansı, firma ve stok miktarı bazında listeleme.
-- **Sezgisel Arama (Intuitive Search):** İrsaliye no veya not gibi geçmiş veriler arandığında, ilgili tarihi tespit edip o kaydın bulunduğu satıra otomatik odaklanma ve vurgulama (Highlight).
-- **Hareket Geçmişi:** Her bir materyalin giriş-çıkış hareketlerinin tarihçesi (Tarih ve Saat detaylı).
-- **Kritik Stok Uyarıları:** Belirlenen eşiğin altına düşen ürünler için otomatik bildirimler.
+- **Detailed Stock Tracking:** Listing by material reference, company, and stock quantity.
+- **Intuitive Search:** Automatically detects dates from searched waybill numbers or notes, finding and highlighting the specific record.
+- **Movement History:** Detailed history of entry/exit movements for each material (Date and Time).
+- **Critical Stock Alerts:** Automatic notifications for items falling below defined thresholds.
 
-### 🔢 Stok Sayım Modülü
+### 🔢 Stock Count Module
 ![Stock Count](/public/screenshots/stock-count.png)
-- **Anlık Karşılaştırma:** Fiziksel sayım ile sistem stoğunu anında karşılaştırır.
-- **Kör Sayım (Blind Count):** Personelin sistem stoğunu görmeden sayım yapmasını sağlayan mod.
-- **Fark Raporlama:** Eşleşmeyen kalemleri otomatik olarak raporlar ve PDF/XLS olarak dışa aktarır.
+- **Instant Comparison:** Instantly compares physical counts with system stock.
+- **Blind Count:** A mode allowing staff to count without seeing system stock values.
+- **Discrepancy Reporting:** Automatically reports mismatched items and exports them as PDF/XLS.
 
-### 📱 Mobil Uyumluluk
+### 📱 Mobile Responsiveness
 <img src="/public/screenshots/mobile-view.png" width="300" alt="Mobile View" />
-- **Responsive Tasarım:** Tüm tablet ve telefonlarda tam uyumlu arayüz.
-- **Mobil Odaklı Menü:** Kolay erişilebilir navigasyon ve dokunmatik dostu butonlar.
+- **Responsive Design:** Fully compatible interface on all tablets and phones.
+- **Mobile-First Menu:** Easily accessible navigation and touch-friendly buttons.
 
-### 🛡️ Güvenlik & RBAC (Role Tabanlı Erişim)
-- **Granüler Yetkilendirme:** `inventory.create`, `inventory.delete`, `users.manage` gibi ince ayarlı izin sistemi.
-- **Dinamik Rol Yönetimi:** Admin (Project Owner) paneli üzerinden rollere anlık yetki tanımlama/kaldırma.
-- **Güvenli Silme:** Project Owner onayı veya yetkisi ile stok hareketlerini silme ve geri alma korumaları.
-- **Güvenli Kimlik Doğrulama:** NextAuth.js ile şifreli, session tabanlı giriş sistemi.
+### 🛡️ Security & RBAC (Role-Based Access Control)
+- **Granular Authorization:** Fine-grained permission system like `inventory.create`, `inventory.delete`, `users.manage`.
+- **Dynamic Role Management:** Instant assignment/revocation of role permissions via the Admin (Project Owner) panel.
+- **Safe Deletion:** Protection mechanisms for deleting and undoing stock movements, requiring Project Owner approval.
+- **Secure Authentication:** Encrypted, session-based login system with NextAuth.js.
 
-### 🌍 Çoklu Dil Desteği (I18n)
-- **Tam Lokalizasyon:** Türkçe (TR) ve İngilizce (EN) tam destek.
-- **Dinamik Dil Geçişi:** Arayüz üzerinden anlık dil değiştirme ve kullanıcı tercihinin hatırlanması.
+### 🌍 Multi-Language Support (I18n)
+- **Full Localization:** Complete support for Turkish (TR) and English (EN).
+- **Dynamic Language Switching:** Instant language toggling via the interface with user preference memory.
 
-### 🤖 Intra Arc (AI Asistanı)
-- **Google Gemini Entegrasyonu:** Doğal dil işleme ile stok verilerini sorgulama.
-- **Akıllı Analiz:** "Hangi ürün kritik seviyede?", "En son hangi firma işlem yaptı?" gibi sorulara anlık yanıtlar.
+### 🤖 Intra Arc (AI Assistant)
+- **Google Gemini Integration:** Query stock data using natural language processing.
+- **Smart Analysis:** Instant answers to questions like "Which items are critical?" or "Which company transacted last?".
 
 ---
 
-## 🏗 Proje Yapısı
+## 🏗 Project Structure
 
 ```
 inventory-app/
 ├── 📂 app/
-│   ├── 📂 api/              # Backend API rotaları (Next.js Route Handlers)
-│   ├── 📂 dashboard/        # Ana yönetim paneli sayfaları
-│   │   ├── 📂 inventory/    # Stok listesi ve detay sayfaları
-│   │   ├── 📂 reports/      # Raporlama ekranları
-│   │   └── 📂 users/        # Kullanıcı ve Rol yönetimi (RBAC)
-│   └── 📂 login/            # Giriş sayfası
-├── 📂 components/           # Yeniden kullanılabilir UI bileşenleri
-├── 📂 lib/                  # Yardımcı fonksiyonlar, DB ve Auth yapılandırmaları
-│   ├── db.ts               # Prisma veritabanı istemcisi
-│   ├── permissions.ts      # RBAC yetki kontrol mekanizması
-│   └── i18n.ts             # Çeviri sözlükleri ve yapılandırması
-├── 📂 prisma/               # Veritabanı şeması (Schema)
-└── 📂 public/               # Statik dosyalar
+│   ├── 📂 api/              # Backend API routes (Next.js Route Handlers)
+│   ├── 📂 dashboard/        # Main admin panel pages
+│   │   ├── 📂 inventory/    # Stock list and detail pages
+│   │   ├── 📂 reports/      # Reporting screens
+│   │   └── 📂 users/        # User and Role management (RBAC)
+│   └── 📂 login/            # Login page
+├── 📂 components/           # Reusable UI components
+├── 📂 lib/                  # Helper functions, DB and Auth configs
+│   ├── db.ts               # Prisma database client
+│   ├── permissions.ts      # RBAC permission control mechanism
+│   └── i18n.ts             # Translation dictionaries and configuration
+├── 📂 prisma/               # Database schema
+└── 📂 public/               # Static files
 ```
 
 ---
 
-## 🛠 Kullanılan Teknolojiler
+## 🛠 Technologies Used
 
-| Kategori | Teknoloji | Açıklama |
+| Category | Technology | Description |
 |----------|-----------|----------|
-| **Frontend** | Next.js 15 | App Router yapısı ile modern React framework'ü |
-| **Dil** | TypeScript | Tip güvenli geliştirme |
-| **Stil** | Tailwind CSS v4 | Hızlı ve esnek UI tasarımı |
-| **Veritabanı** | PostgreSQL (Supabase) | Ölçeklenebilir ve güvenli veritabanı |
-| **ORM** | Prisma | Veritabanı yönetimi ve tip güvenli sorgular |
-| **Auth** | NextAuth.js | Güvenli kimlik doğrulama çözümü |
-| **I18n** | React Context | Hafif ve performanslı, client-side çeviri yönetimi |
-| **AI** | Google Gemini | Üretken yapay zeka entegrasyonu |
+| **Frontend** | Next.js 15 | Modern React framework with App Router |
+| **Language** | TypeScript | Type-safe development |
+| **Styling** | Tailwind CSS v4 | Fast and flexible UI design |
+| **Database** | PostgreSQL (Supabase) | Scalable and secure database |
+| **ORM** | Prisma | Database management and type-safe queries |
+| **Auth** | NextAuth.js | Secure authentication solution |
+| **I18n** | React Context | Lightweight and performant client-side translation |
+| **AI** | Google Gemini | Generative AI integration |
 
 ---
 
-## 🚀 Kurulum Adımları
+## 🚀 Installation Steps
 
-1. **Repoyu Klonlayın**
+1. **Clone the Repository**
    ```bash
    git clone https://github.com/iwallplace/Track-Base.git
    cd inventory-app
    ```
 
-2. **Bağımlılıkları Yükleyin**
+2. **Install Dependencies**
    ```bash
    npm install
    ```
 
-3. **Çevresel Değişkenleri (.env) Ayarlayın**
-   `.env` dosyasını oluşturun ve veritabanı, auth secret gibi değerleri girin.
+3. **Configure Environment Variables (.env)**
+   Create a `.env` file and enter your database and auth secrets.
 
-4. **Veritabanını Oluşturun**
+4. **Push Database Schema**
    ```bash
    npx prisma db push
    ```
 
-5. **Uygulamayı Başlatın**
+5. **Start the Application**
    ```bash
    npm run dev
    ```
 
 ---
 
-## 📄 Lisans
+## 📄 License
 
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır. All rights reserved © 2026.
+This project is licensed under the [MIT License](LICENSE). All rights reserved © 2026.
