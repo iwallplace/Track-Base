@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
@@ -21,6 +21,10 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
+    const removeToast = useCallback((id: string) => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, []);
+
     const showToast = useCallback((message: string, type: ToastType) => {
         const id = Math.random().toString(36).substring(7);
         setToasts((prev) => [...prev, { id, message, type }]);
@@ -29,16 +33,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         setTimeout(() => {
             removeToast(id);
         }, 3000);
-    }, []);
-
-    const removeToast = (id: string) => {
-        setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    };
+    }, [removeToast]);
 
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence>
                     {toasts.map((toast) => (
                         <motion.div
@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                             initial={{ opacity: 0, y: 20, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-md min-w-[300px] 
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-md min-w-[300px] pointer-events-auto
                                 ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : ''}
                                 ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-600' : ''}
                                 ${toast.type === 'info' ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' : ''}

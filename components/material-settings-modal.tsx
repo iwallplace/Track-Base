@@ -43,6 +43,7 @@ export default function MaterialSettingsModal({ isOpen, onClose }: MaterialSetti
         if (isOpen) {
             fetchMaterials();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, searchTerm]);
 
     const handleUpdate = async (reference: string, minStock: number, description?: string) => {

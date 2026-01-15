@@ -163,9 +163,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
         // 4. Calculate Global Metrics (Snapshot)
         // Fetch Material Limits
-        const materials = await prisma.material.findMany();
+        // Fetch Material Limits
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const materials = await (prisma as any).material.findMany();
         const materialLimits = new Map<string, number>();
-        materials.forEach(m => materialLimits.set(m.reference, m.minStock));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        materials.forEach((m: any) => materialLimits.set(m.reference, m.minStock));
 
         let totalStock = 0;
         let totalExitsGlobal = 0;
