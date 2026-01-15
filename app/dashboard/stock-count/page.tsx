@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
 import { Search, Save, RotateCcw, CheckCircle } from 'lucide-react';
@@ -18,6 +19,7 @@ interface StockCountItem {
 export default function StockCountPage() {
     const { t } = useLanguage();
     const { showToast } = useToast();
+    const { data: session } = useSession();
     const [items, setItems] = useState<StockCountItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -66,8 +68,10 @@ export default function StockCountPage() {
     };
 
     useEffect(() => {
-        loadInventory();
-    }, []);
+        if (session) {
+            loadInventory();
+        }
+    }, [session]);
 
     const handleCountChange = (id: string, value: string) => {
         const numValue = parseInt(value);

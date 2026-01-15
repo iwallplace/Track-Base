@@ -63,8 +63,10 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
     };
 
     useEffect(() => {
-        fetchHistory();
-    }, [materialRef]);
+        if (session) {
+            fetchHistory();
+        }
+    }, [session, materialRef]);
 
     // Scroll to highlight
     useEffect(() => {

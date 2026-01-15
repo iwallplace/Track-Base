@@ -134,8 +134,10 @@ export default function DashboardPage() {
     };
 
     useEffect(() => {
-        fetchItems();
-    }, [currentPage, pageSize, searchTerm, statusFilter, dateRange, showDeleted]);
+        if (session) {
+            fetchItems();
+        }
+    }, [session, currentPage, pageSize, searchTerm, statusFilter, dateRange, showDeleted]);
 
     useEffect(() => {
         const checkPermission = async () => {
