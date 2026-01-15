@@ -6,7 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
 
@@ -20,8 +20,13 @@ export async function GET() {
             return new NextResponse("Forbidden", { status: 403 });
         }
 
+        // Parse limit from query params
+        const { searchParams } = new URL(req.url);
+        const limit = parseInt(searchParams.get('limit') || '100');
+        const take = Math.min(limit, 1000); // Cap at 1000 for safety
+
         const logs = await prisma.auditLog.findMany({
-            take: 100,
+            take,
             orderBy: {
                 createdAt: 'desc'
             },
