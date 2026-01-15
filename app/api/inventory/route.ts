@@ -408,9 +408,46 @@ export async function DELETE(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
+        const materialRef = searchParams.get('materialRef');
+        const action = searchParams.get('action');
 
+        // Bulk Delete by Material Reference
+        if (materialRef && action === 'bulkDelete') {
+            // Only ADMIN can bulk delete materials
+            if (session.user.role !== 'ADMIN') {
+                return forbiddenResponse("Sadece yöneticiler malzeme silebilir");
+            }
+
+            const result = await prisma.$transaction(async (tx) => {
+                // Soft delete all items with this materialReference
+                const updated = await tx.inventoryItem.updateMany({
+                    where: {
+                        materialReference: materialRef,
+                        deletedAt: null
+                    },
+                    data: { deletedAt: new Date() }
+                });
+
+                // Audit Log
+                await tx.auditLog.create({
+                    data: {
+                        userId: session.user.id,
+                        action: "BULK_DELETE (SOFT)",
+                        entity: "INVENTORY",
+                        entityId: materialRef,
+                        details: JSON.stringify({ materialReference: materialRef, count: updated.count })
+                    }
+                });
+
+                return updated;
+            });
+
+            return successResponse({ deletedCount: result.count }, `${result.count} kayıt silindi (Arşivlendi)`);
+        }
+
+        // Single Item Delete
         if (!id) {
-            return errorResponse("ID gerekli", 400);
+            return errorResponse("ID veya materialRef gerekli", 400);
         }
 
         // TRANSACTIONAL SOFT DELETE

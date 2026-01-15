@@ -406,7 +406,6 @@ export default function DashboardPage() {
                                 <th className="px-6 py-4 font-medium">{t('col_last_action')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_note')}</th>
                                 <th className="px-6 py-4 font-medium w-24 text-center">Hızlı İşlem</th>
-                                {canDelete && <th className="px-6 py-4 font-medium w-10"></th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -543,45 +542,6 @@ export default function DashboardPage() {
                                             </div>
                                         )}
                                     </td>
-                                    {canDelete && (
-                                        <td className="px-6 py-4 text-right">
-                                            {showDeleted ? (
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        try {
-                                                            const res = await fetch('/api/inventory', {
-                                                                method: 'PATCH',
-                                                                headers: { 'Content-Type': 'application/json' },
-                                                                body: JSON.stringify({ id: item.id, action: 'restore' })
-                                                            });
-                                                            if (res.ok) {
-                                                                showToast(t('restore_success'), 'success');
-                                                                fetchItems();
-                                                            } else {
-                                                                showToast(t('restore_failed'), 'error');
-                                                            }
-                                                        } catch (error) {
-                                                            console.error(error);
-                                                            showToast(t('error'), 'error');
-                                                        }
-                                                    }}
-                                                    className="text-muted-foreground hover:text-blue-500 transition-colors p-1"
-                                                    title={t('restore')}
-                                                >
-                                                    <RotateCcw className="h-4 w-4" />
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={(e) => handleDeleteClick(e, item.id)}
-                                                    className="text-muted-foreground hover:text-red-500 transition-colors p-1"
-                                                    title={t('delete')}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            )}
-                                        </td>
-                                    )}
                                 </motion.tr>
                             ))}
                         </tbody>

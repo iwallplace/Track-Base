@@ -2,10 +2,11 @@
 
 import { useState, useEffect, use } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Calendar, FileText, Trash2, Search } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Trash2, Search, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-provider';
+import { useToast } from '@/components/toast';
 import DeleteConfirmModal from '@/components/delete-confirm-modal';
 
 interface InventoryItem {
@@ -30,12 +31,14 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
+    const [deleteMaterialModal, setDeleteMaterialModal] = useState(false);
 
     const { data: session } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlight');
     const { t } = useLanguage();
+    const { showToast } = useToast();
     // Decode URL encoded material reference
     const materialRef = decodeURIComponent(rawRef);
 
@@ -109,6 +112,28 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
         }
     };
 
+    // Soft delete ALL inventory items for this material reference
+    const handleDeleteMaterial = async () => {
+        try {
+            // Call API to bulk soft-delete all items with this materialReference
+            const res = await fetch(`/api/inventory?materialRef=${encodeURIComponent(materialRef)}&action=bulkDelete`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                showToast('Malzeme silindi', 'success');
+                setDeleteMaterialModal(false);
+                router.push('/dashboard/inventory');
+            } else {
+                const data = await res.json().catch(() => ({}));
+                showToast(data.message || 'Silme başarısız', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Bir hata oluştu', 'error');
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Paketlendi': return 'text-emerald-500';
@@ -157,15 +182,28 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                     </div>
                 </div>
 
-                <div className="relative w-full md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder={t('search_placeholder') || 'Ara...'}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
-                    />
+                <div className="flex items-center gap-3">
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder={t('search_placeholder') || 'Ara...'}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+                        />
+                    </div>
+
+                    {session?.user?.role === 'ADMIN' && (
+                        <button
+                            onClick={() => setDeleteMaterialModal(true)}
+                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                            title="Malzemeyi Sil"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">Malzemeyi Sil</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -254,6 +292,45 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                 onClose={() => setDeleteModal({ isOpen: false, itemId: null })}
                 onConfirm={handleConfirmDelete}
             />
+
+            {/* Delete Material Modal */}
+            {deleteMaterialModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 rounded-full bg-red-500/10">
+                                <AlertTriangle className="h-6 w-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-foreground">Malzemeyi Sil</h3>
+                                <p className="text-sm text-muted-foreground">Bu işlem geri alınabilir (Arşiv)</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6 p-4 rounded-lg bg-muted/50">
+                            <p className="text-sm text-foreground">
+                                <span className="font-mono font-bold">{materialRef}</span> referanslı malzemenin
+                                <span className="font-bold text-red-500"> tüm kayıtları ({items.length} adet)</span> silinecektir.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteMaterialModal(false)}
+                                className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleDeleteMaterial}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                            >
+                                Tümünü Sil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

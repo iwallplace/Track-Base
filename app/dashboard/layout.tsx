@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Users, Settings, BookOpen, LogOut, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, BookOpen, LogOut, ClipboardList, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import Link from 'next/link';
 import { ModeToggle } from '@/components/theme-toggle';
 import { NotificationsPopover } from '@/components/notifications-popover';
@@ -88,6 +88,22 @@ export default function DashboardLayoutContent({
                             </Link>
                         );
                     })}
+
+                    {/* Collapse Toggle Button */}
+                    <button
+                        onClick={() => setCollapsed(!collapsed)}
+                        className={`mt-4 flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground ${collapsed ? 'justify-center' : ''}`}
+                        title={collapsed ? 'Menüyü Genişlet' : 'Menüyü Küçült'}
+                    >
+                        {collapsed ? (
+                            <ChevronsRight className="h-5 w-5" />
+                        ) : (
+                            <>
+                                <ChevronsLeft className="h-5 w-5 mr-3" />
+                                <span>Küçült</span>
+                            </>
+                        )}
+                    </button>
                 </nav>
 
                 {/* User Profile */}
