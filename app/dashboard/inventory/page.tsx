@@ -549,7 +549,7 @@ export default function DashboardPage() {
                                         key={item.id}
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
-                                        onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}`)}
+                                        onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}${showDeleted ? '&showDeleted=true' : ''}`)}
                                         className={`hover:bg-muted/50 transition-colors cursor-pointer group ${showDeleted ? 'opacity-75 bg-red-50/10 border-l-2 border-l-red-500' : ''} ${isLowStock ? 'bg-red-50/20' : ''}`}
                                     >
                                         <td className="px-6 py-4">

@@ -39,6 +39,8 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
     const router = useRouter();
     const searchParams = useSearchParams();
     const highlightId = searchParams.get('highlight');
+    const showDeletedRaw = searchParams.get('showDeleted');
+    const showDeleted = showDeletedRaw === 'true';
     const { t } = useLanguage();
     const { showToast } = useToast();
     // Decode URL encoded material reference
@@ -48,7 +50,13 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
         try {
             setLoading(true);
             // Fetch ALL items for this reference by using search & limit=-1
-            const res = await fetch(`/api/inventory?limit=-1&search=${encodeURIComponent(materialRef)}`);
+            // If showDeleted is true, we need to pass that to API too
+            const params = new URLSearchParams({
+                limit: '-1',
+                search: materialRef,
+                showDeleted: showDeleted.toString()
+            });
+            const res = await fetch(`/api/inventory?${params}`);
             if (res.ok) {
                 const response = await res.json();
                 const data = response.data || response;
@@ -209,6 +217,22 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                 </div>
             </div>
 
+            {/* Deleted View Banner */}
+            {
+                showDeleted && (
+                    <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-4 flex items-center gap-3 text-red-700">
+                        <Trash2 className="h-5 w-5" />
+                        <span className="font-medium">Şu anda silinmiş kayıtları görüntülüyorsunuz (Arşiv).</span>
+                        <button
+                            onClick={() => router.push(`/dashboard/inventory/${rawRef}`)}
+                            className="ml-auto text-sm underline hover:text-red-900"
+                        >
+                            Aktif Kayıtlara Dön
+                        </button>
+                    </div>
+                )
+            }
+
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
                 <div className="p-6 border-b border-border flex items-center justify-between">
                     <h3 className="font-semibold text-foreground">{t('movement_records')}</h3>
@@ -306,82 +330,86 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
             />
 
             {/* Delete Material Modal */}
-            {deleteMaterialModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="p-3 rounded-full bg-red-500/10">
-                                <AlertTriangle className="h-6 w-6 text-red-500" />
+            {
+                deleteMaterialModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 rounded-full bg-red-500/10">
+                                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-foreground">Malzemeyi Sil</h3>
+                                    <p className="text-sm text-muted-foreground">Bu işlem geri alınabilir (Arşiv)</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-foreground">Malzemeyi Sil</h3>
-                                <p className="text-sm text-muted-foreground">Bu işlem geri alınabilir (Arşiv)</p>
+
+                            <div className="mb-6 p-4 rounded-lg bg-muted/50">
+                                <p className="text-sm text-foreground">
+                                    <span className="font-mono font-bold">{materialRef}</span> referanslı malzemenin
+                                    <span className="font-bold text-red-500"> tüm kayıtları ({items.length} adet)</span> silinecektir.
+                                </p>
                             </div>
-                        </div>
 
-                        <div className="mb-6 p-4 rounded-lg bg-muted/50">
-                            <p className="text-sm text-foreground">
-                                <span className="font-mono font-bold">{materialRef}</span> referanslı malzemenin
-                                <span className="font-bold text-red-500"> tüm kayıtları ({items.length} adet)</span> silinecektir.
-                            </p>
-                        </div>
-
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setDeleteMaterialModal(false)}
-                                className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
-                            >
-                                İptal
-                            </button>
-                            <button
-                                onClick={handleDeleteMaterial}
-                                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-                            >
-                                Tümünü Sil
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* PDF Preview Modal */}
-            {pdfPreviewUrl && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-4xl h-[80vh] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
-                        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
-                            <h3 className="font-semibold text-foreground flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-500" />
-                                İrsaliye Belgesi
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <a
-                                    href={pdfPreviewUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors text-sm"
-                                >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Yeni Sekmede Aç
-                                </a>
+                            <div className="flex justify-end gap-3">
                                 <button
-                                    onClick={() => setPdfPreviewUrl(null)}
-                                    className="p-2 rounded-lg hover:bg-muted transition-colors"
+                                    onClick={() => setDeleteMaterialModal(false)}
+                                    className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
                                 >
-                                    <X className="h-5 w-5" />
+                                    İptal
+                                </button>
+                                <button
+                                    onClick={handleDeleteMaterial}
+                                    className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                >
+                                    Tümünü Sil
                                 </button>
                             </div>
                         </div>
-                        <div className="flex-1 bg-muted">
-                            <iframe
-                                src={pdfPreviewUrl}
-                                className="w-full h-full border-0"
-                                title="PDF Preview"
-                            />
+                    </div>
+                )
+            }
+
+            {/* PDF Preview Modal */}
+            {
+                pdfPreviewUrl && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                        <div className="w-full max-w-4xl h-[80vh] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
+                                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-500" />
+                                    İrsaliye Belgesi
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <a
+                                        href={pdfPreviewUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors text-sm"
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        Yeni Sekmede Aç
+                                    </a>
+                                    <button
+                                        onClick={() => setPdfPreviewUrl(null)}
+                                        className="p-2 rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 bg-muted">
+                                <iframe
+                                    src={pdfPreviewUrl}
+                                    className="w-full h-full border-0"
+                                    title="PDF Preview"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 

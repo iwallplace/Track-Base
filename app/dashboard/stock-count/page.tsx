@@ -7,7 +7,7 @@ import { useToast } from '@/components/toast';
 import {
     Search, Save, RotateCcw, CheckCircle, AlertTriangle, Clock, FileSpreadsheet,
     Download, BarChart3, Package, TrendingUp, TrendingDown, Filter, X, FileText, FileIcon,
-    Cloud, CloudOff, PlayCircle
+    Cloud, CloudOff, PlayCircle, ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -55,24 +55,47 @@ export default function StockCountPage() {
     const saveTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
     // New States for History View
-    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+    const [activeTab, setActiveTab] = useState<'active' | 'history'>('history');
     const [historySessions, setHistorySessions] = useState<any[]>([]);
 
-    // History Logic
+    // Today's Session State for Landing Page
+    const [todayStatus, setTodayStatus] = useState<'LOADING' | 'EXISTS' | 'NONE'>('LOADING');
+    const [todaySessionData, setTodaySessionData] = useState<any>(null);
+
+    // Initial Load - Check both history and today's status
     useEffect(() => {
-        if (activeTab === 'history') {
+        if (session) {
             loadHistory();
+            checkTodayStatus();
         }
-    }, [activeTab]);
+    }, [session]);
 
-    // Initial load check
+    // When switching to active tab, ensure data is loaded for selected countDate
     useEffect(() => {
-        if (session && countDate) {
-            checkSession(countDate);
+        if (activeTab === 'active' && session && countDate) {
+            loadSessionForDate(countDate);
         }
-    }, [session, countDate]);
+    }, [activeTab, countDate, session]);
 
-    const checkSession = async (date: string) => {
+    const checkTodayStatus = async () => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        setTodayStatus('LOADING');
+        try {
+            const res = await fetch(`/api/stock-count/session?date=${today}`);
+            const data = await res.json();
+            if (data && data.id) {
+                setTodayStatus('EXISTS');
+                setTodaySessionData(data);
+            } else {
+                setTodayStatus('NONE');
+                setTodaySessionData(null);
+            }
+        } catch (error) {
+            console.error("Today status check failed", error);
+        }
+    };
+
+    const loadSessionForDate = async (date: string) => {
         setLoading(true);
         setSessionStatus('LOADING');
         try {
@@ -98,15 +121,26 @@ export default function StockCountPage() {
         }
     };
 
+
     const startSession = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/stock-count/session?date=${countDate}&create=true`);
+            // Ensure we use today's date if starting new from landing
+            const today = format(new Date(), 'yyyy-MM-dd');
+            setCountDate(today);
+
+            const res = await fetch(`/api/stock-count/session?date=${today}&create=true`);
             if (res.ok) {
                 const data = await res.json();
                 setSessionId(data.id);
                 setSessionStatus('ACTIVE');
                 await loadInventoryWithSession([]);
+
+                // Update today status
+                setTodayStatus('EXISTS');
+                setTodaySessionData(data);
+                setActiveTab('active'); // Switch to active view
+
                 showToast('Sayım oturumu başlatıldı', 'success');
             } else {
                 showToast('Oturum başlatılamadı', 'error');
@@ -421,14 +455,27 @@ export default function StockCountPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-foreground">Stok Sayım Modülü</h2>
-                    <p className="text-muted-foreground">Fiziksel sayım ve sistem karşılaştırması</p>
+                <div className="flex items-center gap-4">
+                    {activeTab === 'active' && (
+                        <button
+                            onClick={() => {
+                                setActiveTab('history');
+                                checkTodayStatus();
+                                loadHistory();
+                            }}
+                            className="p-2 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
+                        >
+                            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                    )}
+                    <div>
+                        <h2 className="text-2xl font-bold text-foreground">Stok Sayım Modülü</h2>
+                        <p className="text-muted-foreground">Fiziksel sayım ve sistem karşılaştırması</p>
+                    </div>
                 </div>
 
-                {/* View Tabs & Blind Mode Toggle */}
+                {/* View Tabs & Blind Mode Toggle (Only in Active Mode) */}
                 <div className="flex items-center gap-4">
-                    {/* Blind Mode Toggle */}
                     {activeTab === 'active' && sessionStatus === 'ACTIVE' && (
                         <button
                             onClick={() => setBlindMode(!blindMode)}
@@ -442,154 +489,141 @@ export default function StockCountPage() {
                             {blindMode ? 'Kör Sayım: AÇIK' : 'Kör Sayım: KAPALI'}
                         </button>
                     )}
-
-                    <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-                        <button
-                            onClick={() => setActiveTab('active')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'active'
-                                ? 'bg-background shadow-sm text-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                        >
-                            Aktif / Günlük Sayım
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('history')}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history'
-                                ? 'bg-background shadow-sm text-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                        >
-                            Sayım Geçmişi (Liste)
-                        </button>
-                    </div>
                 </div>
-
-                {/* Only show date picker in active mode */}
-                {activeTab === 'active' && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                            type="date"
-                            value={countDate}
-                            onChange={(e) => setCountDate(e.target.value)}
-                            className="px-3 py-2 text-sm rounded-lg border border-border bg-background"
-                        />
-
-                        {sessionStatus === 'ACTIVE' && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium border border-emerald-500/20">
-                                <Cloud className="h-3 w-3" />
-                                <span>Oturum Aktif</span>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* Content Switch */}
             {activeTab === 'history' ? (
-                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
-                            <tr>
-                                <th className="px-6 py-4 font-medium">Tarih</th>
-                                <th className="px-6 py-4 font-medium">Kullanıcı</th>
-                                <th className="px-6 py-4 font-medium text-center">Toplam Kalem</th>
-                                <th className="px-6 py-4 font-medium text-center">Farklı Kalem</th>
-                                <th className="px-6 py-4 font-medium text-center">Durum</th>
-                                <th className="px-6 py-4 font-medium text-right">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {loading && historySessions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                                        <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
-                                        Geçmiş yükleniyor...
-                                    </td>
-                                </tr>
-                            ) : historySessions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                                        Henüz tamamlanmış bir sayım kaydı yok.
-                                    </td>
-                                </tr>
-                            ) : (
-                                historySessions.map((session) => (
-                                    <tr key={session.id} className="hover:bg-muted/50 transition-colors">
-                                        <td className="px-6 py-4 font-medium">{format(new Date(session.date), 'dd MMMM yyyy', { locale: tr })}</td>
-                                        <td className="px-6 py-4 text-muted-foreground">{session.user}</td>
-                                        <td className="px-6 py-4 text-center font-mono">{session.totalItems}</td>
-                                        <td className="px-6 py-4 text-center font-mono font-bold">
-                                            {session.mismatchCount > 0 ? (
-                                                <span className="text-red-600">{session.mismatchCount}</span>
-                                            ) : (
-                                                <span className="text-emerald-600">0</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
-                                                }`}>
-                                                {session.status === 'COMPLETED' ? 'Tamamlandı' : 'Devam Ediyor'}
+                <div className="space-y-8">
+                    {/* 1. Hero Card: Today's Action */}
+                    <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-start gap-4">
+                                <div className="p-4 rounded-full bg-blue-500/10">
+                                    <Clock className="h-8 w-8 text-blue-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-foreground">Bugünün Sayımı</h3>
+                                    <p className="text-muted-foreground mt-1">
+                                        {format(new Date(), 'dd MMMM yyyy', { locale: tr })} tarihi için işlem yapın.
+                                    </p>
+                                    <div className="mt-2 text-sm">
+                                        {todayStatus === 'LOADING' ? (
+                                            <span className="text-muted-foreground">Yükleniyor...</span>
+                                        ) : todayStatus === 'EXISTS' ? (
+                                            <span className="text-emerald-600 font-medium flex items-center gap-1">
+                                                <CheckCircle className="h-4 w-4" /> Oturum Mevcut ({todaySessionData?.status === 'COMPLETED' ? 'Tamamlandı' : 'Devam Ediyor'})
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleHistoryClick(session.date)}
-                                                className="text-blue-600 hover:underline text-xs flex items-center justify-end gap-1 ml-auto"
-                                            >
-                                                Detay Gör <Search className="h-3 w-3" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                /* EXISTING ACTIVE SESSION VIEW */
-                <>
-                    {/* Session Starter */}
-                    {sessionStatus === 'NOT_STARTED' && (
-                        <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-xl shadow-sm text-center">
-                            <div className="p-4 rounded-full bg-blue-500/10 mb-4">
-                                <Clock className="h-8 w-8 text-blue-500" />
+                                        ) : (
+                                            <span className="text-amber-600 font-medium flex items-center gap-1">
+                                                <AlertTriangle className="h-4 w-4" /> Henüz oturum açılmamış
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Check if selected date is today */}
-                            {format(new Date(), 'yyyy-MM-dd') === countDate ? (
-                                <>
-                                    <h3 className="text-xl font-bold mb-2">Sayım Oturumu Başlatın</h3>
-                                    <p className="text-muted-foreground max-w-md mb-6">
-                                        Seçili tarih ({format(new Date(countDate), 'dd.MM.yyyy')}) için henüz bir sayım oturumu başlatılmamış.
-                                        Başlamak için aşağıdaki butona tıklayın.
-                                    </p>
+                            <div className="flex gap-3">
+                                {todayStatus === 'NONE' && (
                                     <button
                                         onClick={startSession}
                                         disabled={loading}
                                         className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
                                     >
-                                        {loading ? 'Başlatılıyor...' : (
-                                            <>
-                                                <PlayCircle className="h-5 w-5" />
-                                                Sayımı Başlat
-                                            </>
-                                        )}
+                                        <PlayCircle className="h-5 w-5" />
+                                        Sayımı Başlat
                                     </button>
-                                </>
-                            ) : (
-                                <>
-                                    <h3 className="text-xl font-bold mb-2 text-muted-foreground">Kayıt Bulunamadı</h3>
-                                    <p className="text-muted-foreground max-w-md">
-                                        {format(new Date(countDate), 'dd.MM.yyyy')} tarihinde yapılmış bir sayım kaydı bulunmamaktadır.
-                                        <br />
-                                        <span className="text-amber-600 font-medium text-sm mt-2 block">
-                                            <AlertTriangle className="h-3 w-3 inline-block mr-1" />
-                                            Yeni sayım sadece bugünün tarihi ile başlatılabilir.
-                                        </span>
-                                    </p>
-                                </>
-                            )}
+                                )}
+                                {todayStatus === 'EXISTS' && (
+                                    <button
+                                        onClick={() => {
+                                            setCountDate(format(new Date(), 'yyyy-MM-dd'));
+                                            setActiveTab('active');
+                                        }}
+                                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+                                    >
+                                        <div className="relative">
+                                            <RotateCcw className="h-5 w-5" />
+                                            {todaySessionData?.status !== 'COMPLETED' && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
+                                        </div>
+                                        {todaySessionData?.status === 'COMPLETED' ? 'Sonuçları Görüntüle' : 'Sayımı Sürdür'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 2. Past Sessions List */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-foreground px-1">Geçmiş Sayımlar</h3>
+                        <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
+                                    <tr>
+                                        <th className="px-6 py-4 font-medium">Tarih</th>
+                                        <th className="px-6 py-4 font-medium">Kullanıcı</th>
+                                        <th className="px-6 py-4 font-medium text-center">Toplam Kalem</th>
+                                        <th className="px-6 py-4 font-medium text-center">Farklı Kalem</th>
+                                        <th className="px-6 py-4 font-medium text-center">Durum</th>
+                                        <th className="px-6 py-4 font-medium text-right">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {loading && historySessions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                                <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                                Geçmiş yükleniyor...
+                                            </td>
+                                        </tr>
+                                    ) : historySessions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                                Henüz tamamlanmış bir sayım kaydı yok.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        historySessions.map((session) => (
+                                            <tr key={session.id} className="hover:bg-muted/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium">{format(new Date(session.date), 'dd MMMM yyyy', { locale: tr })}</td>
+                                                <td className="px-6 py-4 text-muted-foreground">{session.user}</td>
+                                                <td className="px-6 py-4 text-center font-mono">{session.totalItems}</td>
+                                                <td className="px-6 py-4 text-center font-mono font-bold">
+                                                    {session.mismatchCount > 0 ? (
+                                                        <span className="text-red-600">{session.mismatchCount}</span>
+                                                    ) : (
+                                                        <span className="text-emerald-600">0</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                                                        }`}>
+                                                        {session.status === 'COMPLETED' ? 'Tamamlandı' : 'Devam Ediyor'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleHistoryClick(session.date)}
+                                                        className="text-blue-600 hover:underline text-xs flex items-center justify-end gap-1 ml-auto"
+                                                    >
+                                                        Detay Gör <Search className="h-3 w-3" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                /* ACTIVE SESSION VIEW (Counting UI) */
+                <>
+                    {/* Session Status Bar (Instead of Starter) */}
+                    {sessionStatus === 'NOT_STARTED' && (
+                        <div className="flex items-center justify-center p-8 bg-card border border-border rounded-xl">
+                            <p className="text-muted-foreground">Oturum verisi bulunamadı. Lütfen geri dönüp tekrar deneyin.</p>
                         </div>
                     )}
 

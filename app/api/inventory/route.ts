@@ -215,7 +215,7 @@ export async function GET(req: Request) {
             const processedResults = await Promise.all(distinctMaterials.map(async (mat) => {
                 const ref = mat.materialReference;
 
-                // A. Find Latest Item details
+                // A. Find Latest Item details (from the filtered set)
                 const latestItem = await prisma.inventoryItem.findFirst({
                     where: { materialReference: ref, ...queryWhere },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
@@ -229,6 +229,7 @@ export async function GET(req: Request) {
                 }
 
                 // C. Get Pre-calculated Balance
+                // For deleted items, this "balance" represents the sum of deleted entry/exit amounts
                 const balance = balanceMap.get(ref) || 0;
 
 
