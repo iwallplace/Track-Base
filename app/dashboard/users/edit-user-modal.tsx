@@ -15,6 +15,7 @@ interface EditUserModalProps {
         username: string;
         role: string;
     } | null;
+    roles?: { id: string; name: string; label: string; }[];
 }
 
 export default function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModalProps) {
@@ -141,10 +142,9 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                                 onChange={e => setFormData({ ...formData, role: e.target.value })}
                                 className="w-full rounded-lg bg-background border border-input pl-10 pr-4 py-2 text-foreground focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                             >
-                                <option value="USER">{t('role_select_user')}</option>
-                                <option value="IME">{t('role_select_ime')}</option>
-                                <option value="KALITE">{t('role_select_quality')}</option>
-                                <option value="ADMIN">{t('role_select_admin')}</option>
+                                {roles?.map(role => (
+                                    <option key={role.id} value={role.name}>{role.label}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

@@ -228,24 +228,25 @@ export async function PUT(req: Request) {
             return notFoundResponse("Kullanıcı bulunamadı");
         }
 
-        // Permission Check: IME/KALITE can only manage USER role
+        // Permission Check: IME/KALITE/SCL can manage roles but not ADMIN interactions
         if (session.user.role !== 'ADMIN') {
-            if (targetUser.role !== 'USER') {
-                return forbiddenResponse("Sadece İnci Personeli kullanıcılarını yönetebilirsiniz");
+            // Cannot modify an ADMIN user
+            if (targetUser.role === 'ADMIN') {
+                return forbiddenResponse("Project Owner kullanıcısını düzenleyemezsiniz");
             }
-            if (role && role !== 'USER') {
-                return forbiddenResponse("Kullanıcı rolünü değiştiremezsiniz");
-            }
-        }
 
-        const updateData: Record<string, unknown> = {};
-        if (name) updateData.name = name;
-        if (username) updateData.username = username;
-        if (password) {
-            updateData.password = await bcrypt.hash(password, 12);
-        }
-        if (role && session.user.role === 'ADMIN') {
-            updateData.role = role;
+            // If changing role
+            if (role) {
+                // Cannot promote to ADMIN
+                if (role === 'ADMIN') {
+                    return forbiddenResponse("Admin yetkisi veremezsiniz");
+                }
+                // Allowed to change role to anything else (USER, IME, KALITE, SCL)
+                updateData.role = role;
+            }
+        } else {
+            // ADMIN can do anything
+            if (role) updateData.role = role;
         }
 
         const updatedUser = await prisma.user.update({

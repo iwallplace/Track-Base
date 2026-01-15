@@ -9,6 +9,28 @@ async function main() {
 
     const password = await bcrypt.hash(adminPassword, 10);
 
+    // Seed Roles
+    const roles = [
+        { name: 'ADMIN', label: 'Project Owner', color: 'purple', isSystem: true },
+        { name: 'USER', label: 'Kullanıcı', color: 'gray', isSystem: true },
+        { name: 'IME', label: 'İnci Personeli', color: 'blue', isSystem: false },
+        { name: 'KALITE', label: 'Kalite Kontrol', color: 'emerald', isSystem: false },
+        { name: 'SCL', label: 'Tedarik Zinciri', color: 'orange', isSystem: false }
+    ];
+
+    for (const role of roles) {
+        await prisma.role.upsert({
+            where: { name: role.name },
+            update: {
+                label: role.label,
+                color: role.color,
+                isSystem: role.isSystem
+            },
+            create: role
+        });
+    }
+    console.log("Roles seeded.");
+
     const admin = await prisma.user.upsert({
         where: { username: adminEmail },
         update: {},

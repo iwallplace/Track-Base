@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2, RotateCcw } from 'lucide-react';
+import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2, RotateCcw, Plus, Tag } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
 import DeleteConfirmModal from '@/components/delete-confirm-modal';
@@ -17,28 +17,37 @@ interface User {
     deletedAt?: string;
 }
 
+interface Role {
+    id: string;
+    name: string;
+    label: string;
+    color: string;
+    isSystem: boolean;
+}
+
 interface PermissionsData {
     permissions: Record<string, Record<string, boolean>>;
     labels: Record<string, string>;
     roleLabels: Record<string, string>;
 }
 
-// Role colors for UI
-const ROLE_COLORS: Record<string, string> = {
-    ADMIN: 'purple',
-    IME: 'blue',
-    KALITE: 'emerald',
-    USER: 'gray'
-};
-
 export default function UsersPage() {
     const { data: session } = useSession();
     const { showToast } = useToast();
     const { t } = useLanguage();
+
+    // Data State
     const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // New User State
     const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'USER' });
+
+    // UI State
     const [showRolePanel, setShowRolePanel] = useState(false);
+    const [showRolesManager, setShowRolesManager] = useState(false);
+    const [newRole, setNewRole] = useState({ name: '', label: '', color: 'blue' });
 
     // Modal State
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -53,7 +62,19 @@ export default function UsersPage() {
     const [showDeleted, setShowDeleted] = useState(false);
 
     const isAdmin = session?.user?.role === 'ADMIN';
-    const canManageUsers = ['ADMIN', 'IME', 'KALITE'].includes(session?.user?.role || '');
+    const canManageUsers = ['ADMIN', 'IME', 'KALITE', 'SCL'].includes(session?.user?.role || '');
+
+    const fetchRoles = async () => {
+        try {
+            const res = await fetch('/api/roles');
+            if (res.ok) {
+                const response = await res.json();
+                setRoles(response.data || response);
+            }
+        } catch (error) {
+            console.error("Roles fetch error:", error);
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -64,20 +85,12 @@ export default function UsersPage() {
                 setUsers(Array.isArray(data) ? data : []);
             } else {
                 if (res.status === 401) {
-                    // Session expired or invalid
-                    console.error("Users fetch 401: Unauthorized");
-                    // Force refresh or redirect? 
-                    // Let's just toast for now to confirm diagnosis
-                    showToast(t('session_expired') || "Oturum süresi doldu, lütfen sayfayı yenileyin", 'error');
-                } else if (res.status === 429) {
-                    showToast(t('rate_limit') || "Çok fazla istek, lütfen bekleyin", 'info');
+                    showToast(t('session_expired') || "Oturum süresi doldu", 'error');
                 } else {
-                    console.error("Users fetch failed:", res.status);
                     showToast(t('error_fetch') || "Veri yüklenemedi", 'error');
                 }
             }
         } catch (error) {
-            console.error("Users fetch network error:", error);
             showToast(t('conn_error'), 'error');
         } finally {
             setLoading(false);
@@ -93,7 +106,6 @@ export default function UsersPage() {
                 setPermissionsData(response.data || response);
             }
         } catch (error) {
-            console.error('Failed to fetch permissions', error);
             showToast(t('error_permissions'), 'error');
         } finally {
             setPermLoading(false);
@@ -102,10 +114,49 @@ export default function UsersPage() {
 
     useEffect(() => {
         if (session) {
+            fetchRoles();
             fetchUsers();
             if (isAdmin) fetchPermissions();
         }
     }, [session, isAdmin, showDeleted]);
+
+    // Role Management
+    const handleAddRole = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/roles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newRole)
+            });
+            if (res.ok) {
+                fetchRoles();
+                setNewRole({ name: '', label: '', color: 'blue' });
+                showToast("Rol oluşturuldu", 'success');
+            } else {
+                const data = await res.json();
+                showToast(data.error || "Hata oluştu", 'error');
+            }
+        } catch (error) {
+            showToast(t('conn_error'), 'error');
+        }
+    };
+
+    const handleDeleteRole = async (id: string) => {
+        if (!confirm("Bu rolü silmek istediğinize emin misiniz?")) return;
+        try {
+            const res = await fetch(`/api/roles?id=${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchRoles();
+                showToast("Rol silindi", 'success');
+            } else {
+                const data = await res.json();
+                showToast(data.error || "Silinemedi", 'error');
+            }
+        } catch (error) {
+            showToast(t('conn_error'), 'error');
+        }
+    };
 
     const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -184,20 +235,33 @@ export default function UsersPage() {
                 showToast(data.error || t('error_update'), 'error');
             }
         } catch (error) {
-            console.error('Permission update error:', error);
             showToast(t('conn_error'), 'error');
         } finally {
             setUpdatingPerm(null);
         }
     };
 
-    const getRoleColorClasses = (color: string) => {
+    const getRoleBadge = (roleCode: string) => {
+        const role = roles.find(r => r.name === roleCode);
+        const label = role?.label || roleCode;
+        const color = role?.color || 'gray';
+
+        let colorClasses = 'bg-secondary text-secondary-foreground border-border';
+
         switch (color) {
-            case 'purple': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
-            case 'blue': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
-            case 'emerald': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
-            default: return 'bg-secondary text-secondary-foreground border-border';
+            case 'purple': colorClasses = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'; break;
+            case 'blue': colorClasses = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'; break;
+            case 'emerald': colorClasses = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'; break;
+            case 'orange': colorClasses = 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'; break;
+            case 'red': colorClasses = 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'; break;
         }
+
+        return (
+            <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs border ${colorClasses}`}>
+                {roleCode === 'ADMIN' && <Shield className="h-3 w-3" />}
+                {label}
+            </span>
+        );
     };
 
     if (!session) return null;
@@ -209,6 +273,7 @@ export default function UsersPage() {
                 onClose={() => setIsEditModalOpen(false)}
                 onSuccess={fetchUsers}
                 user={editingUser}
+                roles={roles}
             />
 
             <DeleteConfirmModal
@@ -240,6 +305,98 @@ export default function UsersPage() {
                 </div>
             </div>
 
+            {/* Role Management Panel - ADMIN Only */}
+            {isAdmin && (
+                <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+                    <button
+                        onClick={() => setShowRolesManager(!showRolesManager)}
+                        className="w-full flex items-center justify-between p-6 hover:bg-muted/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Tag className="h-5 w-5 text-blue-500" />
+                            <div className="text-left">
+                                <h3 className="text-lg font-medium text-foreground">Rol Yönetimi</h3>
+                                <p className="text-sm text-muted-foreground">Yeni roller ekleyin veya düzenleyin</p>
+                            </div>
+                        </div>
+                        {showRolesManager ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    </button>
+
+                    {showRolesManager && (
+                        <div className="border-t border-border p-6 bg-muted/30">
+                            <div className="grid md:grid-cols-2 gap-8">
+                                {/* Add Role Form */}
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-semibold text-foreground">Yeni Rol Oluştur</h4>
+                                    <form onSubmit={handleAddRole} className="space-y-4 rounded-lg bg-background border border-border p-4">
+                                        <div>
+                                            <label className="text-xs text-muted-foreground block mb-1">Rol Kodu (Benzersiz)</label>
+                                            <input
+                                                required
+                                                placeholder="Örn: DRIVER"
+                                                value={newRole.name}
+                                                onChange={e => setNewRole({ ...newRole, name: e.target.value.toUpperCase() })}
+                                                className="w-full px-3 py-2 rounded border border-input text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-muted-foreground block mb-1">Rol Etiketi (Görünecek Ad)</label>
+                                            <input
+                                                required
+                                                placeholder="Örn: Şoför"
+                                                value={newRole.label}
+                                                onChange={e => setNewRole({ ...newRole, label: e.target.value })}
+                                                className="w-full px-3 py-2 rounded border border-input text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-muted-foreground block mb-1">Renk</label>
+                                            <select
+                                                value={newRole.color}
+                                                onChange={e => setNewRole({ ...newRole, color: e.target.value })}
+                                                className="w-full px-3 py-2 rounded border border-input text-sm"
+                                            >
+                                                <option value="gray">Gri</option>
+                                                <option value="blue">Mavi</option>
+                                                <option value="purple">Mor</option>
+                                                <option value="emerald">Yeşil</option>
+                                                <option value="orange">Turuncu</option>
+                                                <option value="red">Kırmızı</option>
+                                            </select>
+                                        </div>
+                                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded py-2 text-sm font-medium">Olustur</button>
+                                    </form>
+                                </div>
+
+                                {/* Roles List */}
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-semibold text-foreground">Mevcut Roller</h4>
+                                    <div className="space-y-2">
+                                        {roles.map(role => (
+                                            <div key={role.id} className="flex items-center justify-between p-3 rounded bg-background border border-border">
+                                                <div className="flex items-center gap-3">
+                                                    {getRoleBadge(role.name)}
+                                                    <span className="text-xs text-muted-foreground font-mono">{role.name}</span>
+                                                </div>
+                                                {!role.isSystem && (
+                                                    <button
+                                                        onClick={() => handleDeleteRole(role.id)}
+                                                        className="text-muted-foreground hover:text-red-500"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                                {role.isSystem && <span className="text-[10px] bg-muted px-2 py-1 rounded">Sistem</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Role Permissions Panel - ADMIN Only */}
             {isAdmin && (
                 <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
@@ -254,11 +411,7 @@ export default function UsersPage() {
                                 <p className="text-sm text-muted-foreground">{t('role_permissions_desc')}</p>
                             </div>
                         </div>
-                        {showRolePanel ? (
-                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                        )}
+                        {showRolePanel ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                     </button>
 
                     {showRolePanel && (
@@ -275,11 +428,9 @@ export default function UsersPage() {
                                             <thead>
                                                 <tr className="text-left">
                                                     <th className="pb-4 pr-4 font-medium text-muted-foreground">{t('permission_col')}</th>
-                                                    {Object.keys(ROLE_COLORS).map((role) => (
-                                                        <th key={role} className="pb-4 px-4 text-center font-medium">
-                                                            <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs border ${getRoleColorClasses(ROLE_COLORS[role])}`}>
-                                                                {permissionsData.roleLabels[role] || role}
-                                                            </span>
+                                                    {roles.map((role) => (
+                                                        <th key={role.name} className="pb-4 px-4 text-center font-medium">
+                                                            {getRoleBadge(role.name)}
                                                         </th>
                                                     ))}
                                                 </tr>
@@ -288,27 +439,22 @@ export default function UsersPage() {
                                                 {Object.entries(permissionsData.labels).map(([permKey, permLabel]) => (
                                                     <tr key={permKey} className="hover:bg-muted/50">
                                                         <td className="py-3 pr-4 text-foreground">{permLabel}</td>
-                                                        {Object.keys(ROLE_COLORS).map((role) => {
-                                                            const granted = permissionsData.permissions[role]?.[permKey] ?? false;
-                                                            const isUpdating = updatingPerm === `${role}-${permKey}`;
-                                                            const isProtected = role === 'ADMIN'; // All ADMIN permissions are locked
+                                                        {roles.map((role) => {
+                                                            const granted = permissionsData.permissions[role.name]?.[permKey] ?? false;
+                                                            const isUpdating = updatingPerm === `${role.name}-${permKey}`;
+                                                            const isProtected = role.name === 'ADMIN';
 
                                                             return (
-                                                                <td key={role} className="py-3 px-4 text-center">
+                                                                <td key={role.name} className="py-3 px-4 text-center">
                                                                     <button
-                                                                        onClick={() => !isProtected && handleTogglePermission(role, permKey, granted)}
+                                                                        onClick={() => !isProtected && handleTogglePermission(role.name, permKey, granted)}
                                                                         disabled={isUpdating || isProtected}
                                                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-background
                                                                             ${granted ? 'bg-emerald-600' : 'bg-muted-foreground'}
                                                                             ${isProtected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}
                                                                         `}
-                                                                        title={isProtected ? t('cannot_remove_admin') : undefined}
                                                                     >
-                                                                        {isUpdating ? (
-                                                                            <Loader2 className="h-4 w-4 animate-spin text-white mx-auto" />
-                                                                        ) : (
-                                                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${granted ? 'translate-x-6' : 'translate-x-1'}`} />
-                                                                        )}
+                                                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${granted ? 'translate-x-6' : 'translate-x-1'}`} />
                                                                     </button>
                                                                 </td>
                                                             );
@@ -317,12 +463,6 @@ export default function UsersPage() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
-                                    <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
-                                        <p className="text-xs text-muted-foreground">
-                                            <ShieldAlert className="h-3 w-3 inline mr-1" />
-                                            {t('permission_note')}
-                                        </p>
                                     </div>
                                 </>
                             ) : (
@@ -333,7 +473,7 @@ export default function UsersPage() {
                 </div>
             )}
 
-            {/* Add User Form - Only for Authorized Roles */}
+            {/* Add User Form */}
             {canManageUsers && (
                 <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                     <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
@@ -376,10 +516,9 @@ export default function UsersPage() {
                                 onChange={e => setNewUser({ ...newUser, role: e.target.value })}
                                 className="w-full rounded bg-background border border-input px-3 py-2 text-foreground text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             >
-                                <option value="USER">{t('role_select_user')}</option>
-                                <option value="IME">{t('role_select_ime')}</option>
-                                <option value="KALITE">{t('role_select_quality')}</option>
-                                <option value="ADMIN">{t('role_select_admin')}</option>
+                                {roles.map(role => (
+                                    <option key={role.id} value={role.name}>{role.label}</option>
+                                ))}
                             </select>
                         </div>
                         <button className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 text-sm font-medium transition-colors">
@@ -404,7 +543,7 @@ export default function UsersPage() {
                         {users.map(user => {
                             const canAction = session?.user?.role === 'ADMIN'
                                 ? user.role !== 'ADMIN'
-                                : user.role === 'USER';
+                                : user.role === 'USER'; // Can update logic later if needed for managers
 
                             return (
                                 <tr key={user.id} className={`hover:bg-muted/50 transition-colors ${user.deletedAt ? 'bg-red-500/5 hover:bg-red-500/10' : ''}`}>
@@ -419,23 +558,7 @@ export default function UsersPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className={user.deletedAt ? 'opacity-50' : ''}>
-                                            {user.role === 'ADMIN' ? (
-                                                <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 px-2 py-1 text-xs text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                                                    <Shield className="h-3 w-3" /> {t('role_admin')}
-                                                </span>
-                                            ) : user.role === 'IME' ? (
-                                                <span className="inline-flex items-center rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                    {t('role_ime')}
-                                                </span>
-                                            ) : user.role === 'KALITE' ? (
-                                                <span className="inline-flex items-center rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                                    {t('role_quality')}
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
-                                                    {t('role_user')}
-                                                </span>
-                                            )}
+                                            {getRoleBadge(user.role)}
                                         </div>
                                     </td>
                                     <td className={`px-6 py-4 text-muted-foreground ${user.deletedAt ? 'opacity-50' : ''}`}>
