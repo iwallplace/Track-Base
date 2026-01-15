@@ -38,6 +38,16 @@ export async function GET(req: Request) {
         const shouldCreate = searchParams.get('create') === 'true';
 
         if (!stockSession && shouldCreate) {
+            // Validate that we can only create sessions for TODAY
+            const today = new Date();
+            const isSameDay = targetDate.getDate() === today.getDate() &&
+                targetDate.getMonth() === today.getMonth() &&
+                targetDate.getFullYear() === today.getFullYear();
+
+            if (!isSameDay) {
+                return new NextResponse("Geçmiş veya gelecek tarihli sayım başlatılamaz.", { status: 400 });
+            }
+
             stockSession = await prisma.stockCountSession.create({
                 data: {
                     sessionDate: targetDate, // Use the specific date requested

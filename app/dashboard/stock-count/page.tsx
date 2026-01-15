@@ -393,23 +393,41 @@ export default function StockCountPage() {
                     <div className="p-4 rounded-full bg-blue-500/10 mb-4">
                         <Clock className="h-8 w-8 text-blue-500" />
                     </div>
-                    <h3 className="text-xl font-bold mb-2">Sayım Oturumu Başlatın</h3>
-                    <p className="text-muted-foreground max-w-md mb-6">
-                        Seçili tarih ({format(new Date(countDate), 'dd.MM.yyyy')}) için henüz bir sayım oturumu başlatılmamış.
-                        Başlamak için aşağıdaki butona tıklayın.
-                    </p>
-                    <button
-                        onClick={startSession}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
-                    >
-                        {loading ? 'Başlatılıyor...' : (
-                            <>
-                                <PlayCircle className="h-5 w-5" />
-                                Sayımı Başlat
-                            </>
-                        )}
-                    </button>
+
+                    {/* Check if selected date is today */}
+                    {format(new Date(), 'yyyy-MM-dd') === countDate ? (
+                        <>
+                            <h3 className="text-xl font-bold mb-2">Sayım Oturumu Başlatın</h3>
+                            <p className="text-muted-foreground max-w-md mb-6">
+                                Seçili tarih ({format(new Date(countDate), 'dd.MM.yyyy')}) için henüz bir sayım oturumu başlatılmamış.
+                                Başlamak için aşağıdaki butona tıklayın.
+                            </p>
+                            <button
+                                onClick={startSession}
+                                disabled={loading}
+                                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                            >
+                                {loading ? 'Başlatılıyor...' : (
+                                    <>
+                                        <PlayCircle className="h-5 w-5" />
+                                        Sayımı Başlat
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <h3 className="text-xl font-bold mb-2 text-muted-foreground">Kayıt Bulunamadı</h3>
+                            <p className="text-muted-foreground max-w-md">
+                                {format(new Date(countDate), 'dd.MM.yyyy')} tarihinde yapılmış bir sayım kaydı bulunmamaktadır.
+                                <br />
+                                <span className="text-amber-600 font-medium text-sm mt-2 block">
+                                    <AlertTriangle className="h-3 w-3 inline-block mr-1" />
+                                    Yeni sayım sadece bugünün tarihi ile başlatılabilir.
+                                </span>
+                            </p>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -513,11 +531,11 @@ export default function StockCountPage() {
                                             key={status}
                                             onClick={() => setStatusFilter(status)}
                                             className={`px-3 py-2 text-xs font-medium transition-colors ${statusFilter === status
-                                                    ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
-                                                        : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
-                                                            : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
-                                                                : 'bg-blue-500/20 text-blue-600'
-                                                    : 'hover:bg-muted'
+                                                ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
+                                                    : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
+                                                        : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
+                                                            : 'bg-blue-500/20 text-blue-600'
+                                                : 'hover:bg-muted'
                                                 }`}
                                         >
                                             {status === 'ALL' ? 'Tümü' : status === 'PENDING' ? 'Bekleyen' : status === 'MATCH' ? 'Eşleşen' : 'Farklı'}
@@ -593,7 +611,7 @@ export default function StockCountPage() {
                                             <tr
                                                 key={item.id}
                                                 className={`hover:bg-muted/50 transition-colors ${item.status === 'MISMATCH' ? 'bg-red-500/5' :
-                                                        item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
+                                                    item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
                                                     }`}
                                             >
                                                 <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
@@ -608,8 +626,8 @@ export default function StockCountPage() {
                                                             value={item.countedStock}
                                                             onChange={(e) => handleCountChange(item.id, e.target.value)}
                                                             className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
-                                                                    item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
-                                                                        'border-input bg-background'
+                                                                item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
+                                                                    'border-input bg-background'
                                                                 }`}
                                                             placeholder="0"
                                                         />
