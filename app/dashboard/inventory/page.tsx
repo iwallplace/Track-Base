@@ -88,7 +88,7 @@ export default function DashboardPage() {
         try {
             setLoading(true);
             const params = new URLSearchParams({
-                view: showDeleted ? 'raw' : 'summary', // Force raw view for deleted items
+                view: 'summary', // Always use summary view to group by materialReference
                 page: currentPage.toString(),
                 limit: pageSize.toString(),
                 search: searchTerm,

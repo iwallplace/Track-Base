@@ -158,14 +158,16 @@ export async function GET(req: Request) {
                 }
 
                 // C. Calculate Balance (Aggregate in DB)
+                // Use baseWhere.deletedAt to properly filter deleted/non-deleted items
+                const deletedAtFilter = baseWhere.deletedAt;
                 const [entrySum, exitSum] = await Promise.all([
                     prisma.inventoryItem.aggregate({
                         _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Giriş', deletedAt: null }
+                        where: { materialReference: ref, lastAction: 'Giriş', deletedAt: deletedAtFilter }
                     }),
                     prisma.inventoryItem.aggregate({
                         _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: null }
+                        where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: deletedAtFilter }
                     })
                 ]);
 
