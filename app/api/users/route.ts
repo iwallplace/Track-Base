@@ -223,6 +223,14 @@ export async function PUT(req: Request) {
 
         const { id, name, username, password, role } = validation.data;
 
+        const updateData: any = {};
+        if (name) updateData.name = name;
+        if (username) updateData.username = username;
+        if (password) {
+            const { hash } = await import("bcryptjs");
+            updateData.password = await hash(password, 12);
+        }
+
         const targetUser = await prisma.user.findUnique({ where: { id } });
         if (!targetUser) {
             return notFoundResponse("Kullanıcı bulunamadı");
