@@ -37,6 +37,7 @@ export default function StockCountPage() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionStatus, setSessionStatus] = useState<'LOADING' | 'ACTIVE' | 'NOT_STARTED'>('LOADING');
     const [items, setItems] = useState<StockCountItem[]>([]);
+    const [blindMode, setBlindMode] = useState(false);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
@@ -403,26 +404,43 @@ export default function StockCountPage() {
                     <p className="text-muted-foreground">Fiziksel sayım ve sistem karşılaştırması</p>
                 </div>
 
-                {/* View Tabs */}
-                <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-                    <button
-                        onClick={() => setActiveTab('active')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'active'
-                            ? 'bg-background shadow-sm text-foreground'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        Aktif / Günlük Sayım
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history'
-                            ? 'bg-background shadow-sm text-foreground'
-                            : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                    >
-                        Sayım Geçmişi (Liste)
-                    </button>
+                {/* View Tabs & Blind Mode Toggle */}
+                <div className="flex items-center gap-4">
+                    {/* Blind Mode Toggle */}
+                    {activeTab === 'active' && sessionStatus === 'ACTIVE' && (
+                        <button
+                            onClick={() => setBlindMode(!blindMode)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${blindMode
+                                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                                    : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                                }`}
+                            title="Sistem stoğunu gizle (Kör Sayım)"
+                        >
+                            {blindMode ? <CloudOff className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}
+                            {blindMode ? 'Kör Sayım: AÇIK' : 'Kör Sayım: KAPALI'}
+                        </button>
+                    )}
+
+                    <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                        <button
+                            onClick={() => setActiveTab('active')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'active'
+                                ? 'bg-background shadow-sm text-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            Aktif / Günlük Sayım
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history'
+                                ? 'bg-background shadow-sm text-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            Sayım Geçmişi (Liste)
+                        </button>
+                    </div>
                 </div>
 
                 {/* Only show date picker in active mode */}
@@ -557,63 +575,90 @@ export default function StockCountPage() {
                     {sessionStatus === 'ACTIVE' && (
                         <>
                             {/* Stats Cards - Same as before */}
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                <div className="rounded-xl border border-border bg-card p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-blue-500/10">
-                                            <Package className="h-5 w-5 text-blue-500" />
+                            {!blindMode ? (
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-blue-500/10">
+                                                <Package className="h-5 w-5 text-blue-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                                                <p className="text-xs text-muted-foreground">Toplam</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                                            <p className="text-xs text-muted-foreground">Toplam</p>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-amber-500/10">
+                                                <Clock className="h-5 w-5 text-amber-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+                                                <p className="text-xs text-muted-foreground">Bekleyen</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-emerald-500/10">
+                                                <CheckCircle className="h-5 w-5 text-emerald-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{stats.match}</p>
+                                                <p className="text-xs text-muted-foreground">Eşleşen</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-red-500/10">
+                                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{stats.mismatch}</p>
+                                                <p className="text-xs text-muted-foreground">Farklı</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-purple-500/10">
+                                                <BarChart3 className="h-5 w-5 text-purple-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">%{stats.progress}</p>
+                                                <p className="text-xs text-muted-foreground">Tamamlanan</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-xl border border-border bg-card p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-amber-500/10">
-                                            <Clock className="h-5 w-5 text-amber-500" />
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-blue-500/10">
+                                                <Package className="h-5 w-5 text-blue-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                                                <p className="text-xs text-muted-foreground">Toplam Kalem</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-                                            <p className="text-xs text-muted-foreground">Bekleyen</p>
+                                    </div>
+                                    <div className="rounded-xl border border-border bg-card p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-purple-500/10">
+                                                <CheckCircle className="h-5 w-5 text-purple-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-foreground">{items.length - stats.pending}</p>
+                                                <p className="text-xs text-muted-foreground">Sayılan Kalem</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-xl border border-border bg-card p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-emerald-500/10">
-                                            <CheckCircle className="h-5 w-5 text-emerald-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-foreground">{stats.match}</p>
-                                            <p className="text-xs text-muted-foreground">Eşleşen</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="rounded-xl border border-border bg-card p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-red-500/10">
-                                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-foreground">{stats.mismatch}</p>
-                                            <p className="text-xs text-muted-foreground">Farklı</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="rounded-xl border border-border bg-card p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-purple-500/10">
-                                            <BarChart3 className="h-5 w-5 text-purple-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-foreground">%{stats.progress}</p>
-                                            <p className="text-xs text-muted-foreground">Tamamlanan</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Progress Bar */}
                             <div className="rounded-xl border border-border bg-card p-4">
@@ -707,10 +752,10 @@ export default function StockCountPage() {
                                                 <th className="px-6 py-4 font-medium">Malzeme</th>
                                                 <th className="px-6 py-4 font-medium">Firma</th>
                                                 <th className="px-6 py-4 font-medium">Konum</th>
-                                                <th className="px-6 py-4 font-medium text-right">Sistem Stoğu</th>
+                                                {!blindMode && <th className="px-6 py-4 font-medium text-right">Sistem Stoğu</th>}
                                                 <th className="px-6 py-4 font-medium text-right w-40">Sayım Sonucu</th>
-                                                <th className="px-6 py-4 font-medium text-center w-32">Fark</th>
-                                                <th className="px-6 py-4 font-medium w-32">Durum</th>
+                                                {!blindMode && <th className="px-6 py-4 font-medium text-center w-32">Fark</th>}
+                                                {!blindMode && <th className="px-6 py-4 font-medium w-32">Durum</th>}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
@@ -732,14 +777,14 @@ export default function StockCountPage() {
                                                 filteredItems.map(item => (
                                                     <tr
                                                         key={item.id}
-                                                        className={`hover:bg-muted/50 transition-colors ${item.status === 'MISMATCH' ? 'bg-red-500/5' :
-                                                            item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
+                                                        className={`hover:bg-muted/50 transition-colors ${!blindMode && item.status === 'MISMATCH' ? 'bg-red-500/5' :
+                                                            !blindMode && item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
                                                             }`}
                                                     >
                                                         <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
                                                         <td className="px-6 py-4 text-muted-foreground">{item.company || '-'}</td>
                                                         <td className="px-6 py-4 text-muted-foreground">{item.location || '-'}</td>
-                                                        <td className="px-6 py-4 text-right font-mono text-lg font-bold">{item.systemStock}</td>
+                                                        {!blindMode && <td className="px-6 py-4 text-right font-mono text-lg font-bold">{item.systemStock}</td>}
                                                         <td className="px-6 py-4">
                                                             <div className="relative">
                                                                 <input
@@ -747,8 +792,8 @@ export default function StockCountPage() {
                                                                     min="0"
                                                                     value={item.countedStock}
                                                                     onChange={(e) => handleCountChange(item.id, e.target.value)}
-                                                                    className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
-                                                                        item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
+                                                                    className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${!blindMode && item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
+                                                                        !blindMode && item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
                                                                             'border-input bg-background'
                                                                         }`}
                                                                     placeholder="0"
@@ -761,32 +806,36 @@ export default function StockCountPage() {
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-center font-mono font-bold">
-                                                            {item.status === 'MISMATCH' && (
-                                                                <span className={item.difference! > 0 ? 'text-emerald-600' : 'text-red-600'}>
-                                                                    {item.difference! > 0 ? '+' : ''}{item.difference}
-                                                                </span>
-                                                            )}
-                                                            {item.status === 'MATCH' && <span className="text-emerald-600">0</span>}
-                                                            {item.status === 'PENDING' && <span className="text-muted-foreground">-</span>}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            {item.status === 'MATCH' && (
-                                                                <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
-                                                                    <CheckCircle className="h-4 w-4" /> Eşleşti
-                                                                </span>
-                                                            )}
-                                                            {item.status === 'MISMATCH' && (
-                                                                <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-                                                                    <AlertTriangle className="h-4 w-4" /> Fark Var
-                                                                </span>
-                                                            )}
-                                                            {item.status === 'PENDING' && (
-                                                                <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
-                                                                    <Clock className="h-4 w-4" /> Bekliyor
-                                                                </span>
-                                                            )}
-                                                        </td>
+                                                        {!blindMode && (
+                                                            <td className="px-6 py-4 text-center font-mono font-bold">
+                                                                {item.status === 'MISMATCH' && (
+                                                                    <span className={item.difference! > 0 ? 'text-emerald-600' : 'text-red-600'}>
+                                                                        {item.difference! > 0 ? '+' : ''}{item.difference}
+                                                                    </span>
+                                                                )}
+                                                                {item.status === 'MATCH' && <span className="text-emerald-600">0</span>}
+                                                                {item.status === 'PENDING' && <span className="text-muted-foreground">-</span>}
+                                                            </td>
+                                                        )}
+                                                        {!blindMode && (
+                                                            <td className="px-6 py-4">
+                                                                {item.status === 'MATCH' && (
+                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                                                                        <CheckCircle className="h-4 w-4" /> Eşleşti
+                                                                    </span>
+                                                                )}
+                                                                {item.status === 'MISMATCH' && (
+                                                                    <span className="inline-flex items-center gap-1 text-red-600 font-medium">
+                                                                        <AlertTriangle className="h-4 w-4" /> Fark Var
+                                                                    </span>
+                                                                )}
+                                                                {item.status === 'PENDING' && (
+                                                                    <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                                                                        <Clock className="h-4 w-4" /> Bekliyor
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))
                                             )}
