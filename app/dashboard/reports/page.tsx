@@ -162,6 +162,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         });
 
         // 4. Calculate Global Metrics (Snapshot)
+        // Fetch Material Limits
+        const materials = await prisma.material.findMany();
+        const materialLimits = new Map<string, number>();
+        materials.forEach(m => materialLimits.set(m.reference, m.minStock));
+
         let totalStock = 0;
         let totalExitsGlobal = 0;
         let lowStockCount = 0;
@@ -176,17 +181,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         materialMap.forEach((data, ref) => {
             // Prevent negative stock artifacts in calculation
             const safeBalance = Math.max(0, data.balance);
+            const limit = materialLimits.get(ref) ?? 20;
 
             totalStock += safeBalance;
             totalExitsGlobal += data.totalExit;
 
-            if (safeBalance > 0 && safeBalance < 20) {
+            if (safeBalance <= limit) { // safeBalance > 0 removed to show 0 stock as critical if limit > 0
                 lowStockCount++;
                 lowStockList.push({
                     id: ref, // using ref as id for list
                     materialReference: ref,
                     company: data.company,
-                    stockCount: safeBalance
+                    stockCount: safeBalance,
+                    limit: limit
                 });
             }
 

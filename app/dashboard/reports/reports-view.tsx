@@ -22,8 +22,8 @@ interface ReportsViewProps {
         turnoverRate: string;
         deadStockCount: number;
         lowStockCount: number;
-        lowStockItems: { id: string; materialReference: string; company: string; stockCount: number }[];
-        allLowStockItems?: { id: string; materialReference: string; company: string; stockCount: number }[];
+        lowStockItems: { id: string; materialReference: string; company: string; stockCount: number; limit?: number }[];
+        allLowStockItems?: { id: string; materialReference: string; company: string; stockCount: number; limit?: number }[];
         deadStockItems?: { id: string; materialReference: string; company: string; stockCount: number; lastActivity: Date }[];
         topMaterials: { reference: string; transactionCount: number; totalStock: number }[];
         systemMetrics?: {
@@ -284,7 +284,7 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="font-bold text-amber-600 dark:text-amber-400">{item.stockCount}</div>
-                                                    <div className="text-xs text-amber-600/70">Adet</div>
+                                                    <div className="text-xs text-amber-600/70">Min: {item.limit ?? 20}</div>
                                                 </div>
                                             </div>
                                         ))}

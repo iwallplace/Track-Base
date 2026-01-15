@@ -33,6 +33,7 @@ model InventoryItem {
   date              DateTime
   company           String?
   waybillNo         String
+  waybillUrl        String?      // URL to the uploaded PDF
   materialReference String
   stockCount        Int
   lastAction        String       // "ENTRY", "EXIT", "UPDATE", "DELETE"
@@ -116,4 +117,13 @@ model NotificationState {
 
   @@unique([userId, notificationId, type])
   @@index([userId])
+}
+
+model Material {
+  id             String   @id @default(uuid())
+  reference      String   @unique // Material Reference Code
+  minStock       Int      @default(20) // Critical Stock Limit
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

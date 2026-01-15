@@ -354,6 +354,7 @@ export async function POST(req: Request) {
                     date: date,
                     company: data.company || "",
                     waybillNo: data.waybillNo || "",
+                    waybillUrl: data.waybillUrl,
                     materialReference: data.materialReference,
                     stockCount: data.stockCount,
                     lastAction: data.lastAction || "Giriş",
@@ -445,40 +446,78 @@ export async function PATCH(req: Request) {
     if (!session) return unauthorizedResponse();
 
     // Use same permission as delete for now, as restoring is effectively undoing a delete
-    const hasDeletePermission = await hasPermission(session.user.role || "USER", 'inventory.delete');
-    if (!hasDeletePermission) {
-        return forbiddenResponse("Bu işlem için yetkiniz yok (Envanter kaydı geri alma)");
-    }
+    // Base session check is done above
+    // Action-specific permissions are checked below
+
 
     try {
         const body = await req.json();
         const { id, action } = body;
 
-        if (!id || action !== 'restore') {
-            return errorResponse("Geçersiz istek", 400);
+        if (action === 'restore') {
+            const hasDeletePermission = await hasPermission(session.user.role || "USER", 'inventory.delete');
+            if (!hasDeletePermission) return forbiddenResponse("Bu işlem için yetkiniz yok");
+
+            // TRANSACTIONAL RESTORE
+            await prisma.$transaction(async (tx) => {
+                // 1. Restore Item
+                await tx.inventoryItem.update({
+                    where: { id },
+                    data: { deletedAt: null }
+                });
+
+                // 2. Audit Log
+                await tx.auditLog.create({
+                    data: {
+                        userId: session.user.id,
+                        action: "RESTORE",
+                        entity: "INVENTORY",
+                        entityId: id,
+                        details: JSON.stringify({ id })
+                    }
+                });
+            });
+            return successResponse(undefined, "Kayıt başarıyla geri yüklendi");
         }
 
-        // TRANSACTIONAL RESTORE
-        await prisma.$transaction(async (tx) => {
-            // 1. Restore Item
-            await tx.inventoryItem.update({
-                where: { id },
-                data: { deletedAt: null }
+        if (action === 'qc_update') {
+            // QC Permission Check
+            const isQualityRole = session.user.role === 'KALITE' || session.user.role === 'ADMIN';
+            // Or ideally use granular permission like: await hasPermission(session.user.role, 'inventory.qc');
+
+            if (!isQualityRole) {
+                return forbiddenResponse("Bu işlem için Kalite Kontrol yetkisi gerekli");
+            }
+
+            const { qcStatus, qcNote } = body;
+
+            // TRANSACTIONAL QC UPDATE
+            await prisma.$transaction(async (tx) => {
+                // 1. Update Item
+                await tx.inventoryItem.update({
+                    where: { id },
+                    data: {
+                        qcStatus: qcStatus,
+                        qcNote: qcNote
+                    }
+                });
+
+                // 2. Audit Log
+                await tx.auditLog.create({
+                    data: {
+                        userId: session.user.id,
+                        action: "QC_UPDATE",
+                        entity: "INVENTORY",
+                        entityId: id,
+                        details: JSON.stringify({ qcStatus, qcNote })
+                    }
+                });
             });
 
-            // 2. Audit Log
-            await tx.auditLog.create({
-                data: {
-                    userId: session.user.id,
-                    action: "RESTORE",
-                    entity: "INVENTORY",
-                    entityId: id,
-                    details: JSON.stringify({ id })
-                }
-            });
-        });
+            return successResponse(undefined, "Kalite kontrol durumu güncellendi");
+        }
 
-        return successResponse(undefined, "Kayıt başarıyla geri yüklendi");
+        return errorResponse("Geçersiz işlem", 400);
     } catch (error) {
         devError("Inventory PATCH Error:", error);
         return internalErrorResponse();

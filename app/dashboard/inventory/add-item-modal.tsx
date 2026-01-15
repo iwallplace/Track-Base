@@ -31,6 +31,7 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
         shelf?: string;
         barcode?: string;
         qcRequired?: boolean;
+        waybillUrl?: string;
     }>({
         company: '',
         waybillNo: '',
@@ -41,7 +42,8 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
         aisle: '',
         shelf: '',
         barcode: '',
-        qcRequired: false
+        qcRequired: false,
+        waybillUrl: ''
     });
 
     // Reset/Update form when mode changes or modal opens
@@ -252,6 +254,45 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                             />
                         </div>
                     </div>
+
+                    {mode === 'Giriş' && (
+                        <div className="pt-4 border-t border-border">
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">İrsaliye PDF Yükle (Opsiyonel)</label>
+                            <div className="flex gap-4 items-center">
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const { uploadWaybill } = await import('@/lib/supabase');
+                                            try {
+                                                const path = await uploadWaybill(file, formData.waybillNo || 'temp');
+                                                if (path) {
+                                                    setFormData({ ...formData, waybillUrl: path });
+                                                    showToast("PDF başarıyla yüklendi", 'success');
+                                                } else {
+                                                    showToast("PDF yüklenemedi", 'error');
+                                                }
+                                            } catch (error) {
+                                                console.error(error);
+                                                showToast("Yükleme hatası", 'error');
+                                            }
+                                        }
+                                    }}
+                                    className="block w-full text-sm text-slate-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-violet-50 file:text-violet-700
+                                hover:file:bg-violet-100"
+                                />
+                                {formData.waybillUrl && (
+                                    <a href={formData.waybillUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">Görüntüle</a>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {mode === 'Giriş' && (
                         <div className="flex items-center gap-2 pt-2">

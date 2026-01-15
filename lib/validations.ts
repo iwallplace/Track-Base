@@ -58,7 +58,8 @@ export const createInventoryItemSchema = z.object({
     location: z.string().optional(),
     aisle: z.string().optional(),
     shelf: z.string().optional(),
-    barcode: z.string().optional()
+    barcode: z.string().optional(),
+    waybillUrl: z.string().optional()
 });
 
 // ==================== PROFILE SCHEMAS ====================

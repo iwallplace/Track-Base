@@ -5,11 +5,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Trash2, RotateCcw, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
+import QCModal from '@/components/qc-modal';
 import DateRangePicker from '@/components/date-range-picker';
 import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
 import { useSession } from 'next-auth/react';
 import DeleteConfirmModal from '@/components/delete-confirm-modal';
+import MaterialSettingsModal from '@/components/material-settings-modal';
+import { Settings } from 'lucide-react';
 
 interface InventoryItem {
     id: string; // Latest Item ID
@@ -24,8 +27,10 @@ interface InventoryItem {
     lastAction: string;
     note: string;
     qcStatus?: string;
+    qcNote?: string;
     location?: string;
     barcode?: string;
+    waybillUrl?: string;
 }
 
 export default function DashboardPage() {
@@ -53,6 +58,11 @@ export default function DashboardPage() {
     const [canDelete, setCanDelete] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
     const [showDeleted, setShowDeleted] = useState(false);
+
+    // QC Modal State
+    const [qcModal, setQcModal] = useState({ isOpen: false, item: null as InventoryItem | null });
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
     const [modalInitialData, setModalInitialData] = useState<{
         company?: string;
         waybillNo?: string;
@@ -271,6 +281,16 @@ export default function DashboardPage() {
                         <Plus className="h-4 w-4" />
                         {t('add_exit')}
                     </button>
+                    {/* Material Settings (Admin/IME Only) */}
+                    {(session?.user?.role === 'ADMIN' || session?.user?.role === 'IME') && (
+                        <button
+                            onClick={() => setIsSettingsModalOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                            title="Malzeme Limitleri"
+                        >
+                            <Settings className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -418,12 +438,52 @@ export default function DashboardPage() {
                                             <span className="text-foreground whitespace-nowrap">{item.company}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 font-mono text-muted-foreground text-xs whitespace-nowrap">{item.waybillNo}</td>
+                                    <td className="px-6 py-4 font-mono text-muted-foreground text-xs whitespace-nowrap">
+                                        <div className="flex items-center gap-2">
+                                            {item.waybillNo}
+                                            {item.waybillUrl && (
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            const res = await fetch('/api/storage/sign', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ path: item.waybillUrl })
+                                                            });
+                                                            if (res.ok) {
+                                                                const { data } = await res.json();
+                                                                window.open(data.signedUrl, '_blank');
+                                                            } else {
+                                                                showToast("Belge açılamadı", 'error');
+                                                            }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            showToast("Hata oluştu", 'error');
+                                                        }
+                                                    }}
+                                                    className="text-blue-500 hover:text-blue-700"
+                                                    title="İrsaliye Görüntüle"
+                                                >
+                                                    <Download className="h-3 w-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">{item.location || '-'}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {item.qcStatus === 'PENDING' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">Bekliyor</span>}
-                                        {item.qcStatus === 'APPROVED' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">Onay</span>}
-                                        {item.qcStatus === 'REJECTED' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800">Red</span>}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (item.qcStatus === 'PENDING') {
+                                                    setQcModal({ isOpen: true, item });
+                                                }
+                                            }}
+                                            disabled={item.qcStatus !== 'PENDING' || (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'KALITE')}
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-transform ${item.qcStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 hover:scale-105 cursor-pointer' : ''} ${item.qcStatus === 'APPROVED' ? 'bg-green-100 text-green-800' : ''} ${item.qcStatus === 'REJECTED' ? 'bg-red-100 text-red-800' : ''}`}
+                                        >
+                                            {item.qcStatus === 'PENDING' ? 'Bekliyor' : (item.qcStatus === 'APPROVED' ? 'Onay' : (item.qcStatus === 'REJECTED' ? 'Red' : '-'))}
+                                        </button>
                                         {!item.qcStatus && <span className="text-xs text-muted-foreground">-</span>}
                                     </td>
                                     <td className="px-6 py-4 font-mono font-medium text-foreground text-sm group-hover:text-blue-600 transition-colors whitespace-nowrap">
@@ -555,6 +615,23 @@ export default function DashboardPage() {
                 isOpen={deleteModal.isOpen}
                 onClose={() => setDeleteModal({ isOpen: false, itemId: null })}
                 onConfirm={handleConfirmDelete}
+            />
+
+            <QCModal
+                isOpen={qcModal.isOpen}
+                onClose={() => setQcModal({ isOpen: false, item: null })}
+                onSuccess={fetchItems}
+                item={qcModal.item ? {
+                    id: qcModal.item.id,
+                    materialReference: qcModal.item.materialReference,
+                    qcStatus: qcModal.item.qcStatus || null,
+                    qcNote: qcModal.item.qcNote || null
+                } : null}
+            />
+
+            <MaterialSettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
             />
         </div>
     );
