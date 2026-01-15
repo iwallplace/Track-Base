@@ -24,6 +24,7 @@ const PERMISSION_LABELS: Record<string, string> = {
     // Kullanıcı Yönetimi
     'users.view': 'Kullanıcı listesini görme',
     'users.create': 'Kullanıcı ekleme',
+    'users.create.any-role': 'Herhangi bir role sahip kullanıcı oluşturma',
     'users.edit': 'Kullanıcı düzenleme',
     'users.delete': 'Kullanıcı silme',
     'users.restore': 'Kullanıcı geri yükleme',

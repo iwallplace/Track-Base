@@ -69,5 +69,9 @@ export const config = {
         "/api/email/:path*",
         "/api/audit-logs/:path*",
         "/api/permissions/:path*",
+        "/api/stock-count/:path*",
+        "/api/roles/:path*",
+        "/api/materials/:path*",
+        "/api/storage/:path*",
     ],
 };

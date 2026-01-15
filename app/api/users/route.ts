@@ -85,9 +85,13 @@ export async function POST(req: Request) {
             return errorResponse("Bu kullanıcı adı zaten kullanılıyor", 409);
         }
 
-        // SECURITY: Non-admins can ONLY create 'USER' role
-        if (session.user.role !== 'ADMIN' && role !== 'USER') {
-            return forbiddenResponse("Sadece 'USER' rolünde kullanıcı oluşturabilirsiniz");
+        // SECURITY: Only users with 'users.create.any-role' can create roles other than 'USER'
+        // Default users.create only allows creating 'USER' role
+        if (role !== 'USER') {
+            const canCreateAnyRole = await hasPermission(session.user.role || 'USER', 'users.create.any-role');
+            if (!canCreateAnyRole) {
+                return forbiddenResponse("Sadece 'USER' rolünde kullanıcı oluşturabilirsiniz");
+            }
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);

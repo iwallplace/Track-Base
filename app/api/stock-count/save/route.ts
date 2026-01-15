@@ -38,7 +38,15 @@ export async function POST(req: Request) {
         }
 
         // Upsert the entry
-        const difference = parseInt(countedStock) - parseInt(systemStock);
+        const countedNum = parseInt(countedStock);
+        const systemNum = parseInt(systemStock);
+
+        // Validate parsed numbers
+        if (isNaN(countedNum) || isNaN(systemNum)) {
+            return new NextResponse("Invalid stock count values", { status: 400 });
+        }
+
+        const difference = countedNum - systemNum;
         const status = difference === 0 ? 'MATCH' : 'MISMATCH';
 
         const entry = await prisma.stockCountEntry.upsert({
@@ -49,8 +57,8 @@ export async function POST(req: Request) {
                 }
             },
             update: {
-                countedStock: parseInt(countedStock),
-                systemStock: parseInt(systemStock), // Update system stock snapshot if changed
+                countedStock: countedNum,
+                systemStock: systemNum,
                 difference,
                 status,
                 note,
@@ -59,8 +67,8 @@ export async function POST(req: Request) {
             create: {
                 sessionId,
                 materialReference,
-                countedStock: parseInt(countedStock),
-                systemStock: parseInt(systemStock),
+                countedStock: countedNum,
+                systemStock: systemNum,
                 difference,
                 status,
                 note

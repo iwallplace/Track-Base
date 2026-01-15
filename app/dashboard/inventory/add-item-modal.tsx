@@ -59,6 +59,9 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                 lastAction: mode,
                 note: initialData?.note || ''
             });
+            // Reset PDF upload states
+            setPdfError(null);
+            setPdfUploading(false);
         }
     }, [isOpen, mode, initialData]);
 
