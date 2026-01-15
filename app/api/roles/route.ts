@@ -93,15 +93,20 @@ export async function DELETE(req: Request) {
             return forbiddenResponse("ADMIN (Project Owner) rolü silinemez.");
         }
 
-        // Check if role is in use
-        const userCount = await prisma.user.count({ where: { role: role.name } });
-        if (userCount > 0) {
-            return errorResponse(`Bu rolü kullanan ${userCount} kullanıcı var. Önce kullanıcıların rolünü değiştirin.`, 409);
-        }
+        // Reassign users to 'USER' role
+        await prisma.user.updateMany({
+            where: { role: role.name },
+            data: { role: 'USER' }
+        });
+
+        // Also delete permissions associated with this role to keep DB clean
+        await prisma.rolePermission.deleteMany({
+            where: { role: role.name }
+        });
 
         await prisma.role.delete({ where: { id } });
 
-        return successResponse(undefined, "Rol silindi");
+        return successResponse(undefined, "Rol silindi ve kullanıcılar varsayılan role (USER) aktarıldı");
     } catch (error) {
         devError("Roles DELETE Error:", error);
         return internalErrorResponse();
