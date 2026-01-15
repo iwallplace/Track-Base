@@ -127,3 +127,16 @@ model Material {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+// AI Summary Cache - Stores generated AI summaries to reduce API calls
+model AISummaryCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique // Hash of report data + language
+  summary   String   // Generated summary text
+  language  String   @default("tr") // tr or en
+  createdAt DateTime @default(now())
+  expiresAt DateTime // When this cache entry expires
+
+  @@index([cacheKey])
+  @@index([expiresAt]) // For cleanup of expired entries
+}

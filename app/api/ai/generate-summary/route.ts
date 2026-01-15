@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
+import { prisma } from "@/lib/db";
 import crypto from 'crypto';
 
-// In-memory cache for AI summaries (1 hour TTL)
-interface CacheEntry {
-    text: string;
-    timestamp: number;
-}
-
-const summaryCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour in milliseconds
 
 // Generate a hash from report data to use as cache key
-function generateCacheKey(reportData: any): string {
+function generateCacheKey(reportData: any, language: string): string {
     const dataString = JSON.stringify({
         totalStock: reportData.totalStock,
         monthlyEntry: reportData.monthlyEntry,
@@ -22,17 +16,24 @@ function generateCacheKey(reportData: any): string {
         turnoverRate: reportData.turnoverRate,
         deadStockCount: reportData.deadStockCount,
         lowStockCount: reportData.lowStockCount,
+        language
     });
     return crypto.createHash('md5').update(dataString).digest('hex');
 }
 
-// Clean up expired cache entries periodically
-function cleanupCache() {
-    const now = Date.now();
-    for (const [key, entry] of summaryCache.entries()) {
-        if (now - entry.timestamp > CACHE_TTL_MS) {
-            summaryCache.delete(key);
+// Cleanup expired cache entries (runs periodically)
+async function cleanupExpiredCache() {
+    try {
+        const deleted = await prisma.aISummaryCache.deleteMany({
+            where: {
+                expiresAt: { lt: new Date() }
+            }
+        });
+        if (deleted.count > 0) {
+            console.log(`[AI Cache] Cleaned up ${deleted.count} expired entries`);
         }
+    } catch (error) {
+        console.error("[AI Cache] Cleanup error:", error);
     }
 }
 
@@ -41,28 +42,34 @@ export async function POST(req: Request) {
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
     try {
-        const { reportData, language = 'tr' } = await req.json(); // Default to 'tr' if no language provided
+        const { reportData, language = 'tr' } = await req.json();
 
-        // Check cache first (Cache key should include language now!)
-        // However, user might change language and request same data.
-        // Let's create a composite key.
-        const cacheKey = generateCacheKey({ ...reportData, language });
-        const cachedEntry = summaryCache.get(cacheKey);
+        // Generate cache key
+        const cacheKey = generateCacheKey(reportData, language);
 
-        if (cachedEntry) {
-            const isExpired = Date.now() - cachedEntry.timestamp > CACHE_TTL_MS;
-            if (!isExpired) {
-                console.log("Returning cached AI summary");
-                return NextResponse.json({ text: cachedEntry.text, cached: true });
-            } else {
-                // Clean up this expired entry
-                summaryCache.delete(cacheKey);
-            }
+        // Check database cache first
+        const cachedEntry = await prisma.aISummaryCache.findUnique({
+            where: { cacheKey }
+        });
+
+        if (cachedEntry && cachedEntry.expiresAt > new Date()) {
+            console.log("[AI Cache] Returning cached summary from database");
+            return NextResponse.json({
+                text: cachedEntry.summary,
+                cached: true,
+                expiresAt: cachedEntry.expiresAt.toISOString()
+            });
         }
 
-        // Cleanup old entries periodically
-        cleanupCache();
+        // If expired entry exists, delete it
+        if (cachedEntry) {
+            await prisma.aISummaryCache.delete({ where: { cacheKey } });
+        }
 
+        // Cleanup old entries periodically (fire and forget)
+        cleanupExpiredCache();
+
+        // Generate new summary via Gemini API
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
             console.error("API Key missing");
@@ -103,8 +110,7 @@ ${JSON.stringify(reportData.statusCounts)}
 **Output Language:** ${isEnglish ? 'English' : 'Turkish'}
         `;
 
-        // Direct fetch to support experimental model and config provided by user
-        const modelId = "gemini-flash-latest"; // Or gemini-2.0-flash-exp
+        const modelId = "gemini-flash-latest";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
         const userPayload = {
@@ -112,13 +118,7 @@ ${JSON.stringify(reportData.statusCounts)}
                 role: "user",
                 parts: [{ text: prompt }]
             }],
-            generationConfig: {
-                // thinkingConfig: {
-                //    thinkingBudget: 1024 
-                // }
-                // Removing thinkingConfig for now as 'gemini-flash-latest' might not support it or it causes 400s if not on experimental endpoint.
-                // Keeping it simple and robust.
-            }
+            generationConfig: {}
         };
 
         const res = await fetch(url, {
@@ -145,14 +145,31 @@ ${JSON.stringify(reportData.statusCounts)}
             return NextResponse.json({ error: "No text content in response" }, { status: 500 });
         }
 
-        // Save to cache
-        summaryCache.set(cacheKey, {
-            text: text,
-            timestamp: Date.now()
-        });
-        console.log("AI summary cached for 1 hour");
+        // Calculate expiration time (1 hour from now)
+        const expiresAt = new Date(Date.now() + CACHE_TTL_MS);
 
-        return NextResponse.json({ text, cached: false });
+        // Save to database cache (upsert in case of race condition)
+        await prisma.aISummaryCache.upsert({
+            where: { cacheKey },
+            update: {
+                summary: text,
+                language,
+                expiresAt
+            },
+            create: {
+                cacheKey,
+                summary: text,
+                language,
+                expiresAt
+            }
+        });
+        console.log("[AI Cache] Summary saved to database, expires at:", expiresAt.toISOString());
+
+        return NextResponse.json({
+            text,
+            cached: false,
+            expiresAt: expiresAt.toISOString()
+        });
 
     } catch (error) {
         console.error("Gemini API Internal Error:", error);
