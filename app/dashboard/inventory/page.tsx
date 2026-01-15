@@ -6,7 +6,7 @@ import { Download, Plus, Search, Filter, RefreshCw, ChevronLeft, ChevronRight, C
 import { motion } from 'framer-motion';
 import AddItemModal from './add-item-modal';
 import QCModal from '@/components/qc-modal';
-import DateRangePicker from '@/components/date-range-picker';
+import DateRangePicker, { getDefaultDateRange } from '@/components/date-range-picker';
 import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
 import { useSession } from 'next-auth/react';
@@ -113,6 +113,18 @@ export default function DashboardPage() {
                 } else {
                     setItems(Array.isArray(data) ? data : []);
                 }
+            } else {
+                if (res.status === 401) {
+                    // Session expired
+                    console.error("Unauthorized access to inventory");
+                    showToast(t('session_expired') || "Oturum süresi doldu, lütfen sayfayı yenileyin", 'error');
+                } else if (res.status === 429) {
+                    showToast(t('rate_limit') || "Çok fazla istek, lütfen bekleyin", 'info');
+                } else {
+                    const errorData = await res.json().catch(() => ({}));
+                    console.error("Failed to fetch inventory", res.status, errorData);
+                    showToast(t('error_fetch') || "Veri yüklenemedi", 'error');
+                }
             }
         } catch (error) {
             console.error("Failed to fetch inventory", error);
@@ -128,17 +140,12 @@ export default function DashboardPage() {
     useEffect(() => {
         const checkPermission = async () => {
             if (session?.user?.role) {
-                // If ADMIN, check if protected or if DB has granted it.
-                // However, fetching /api/permissions gives us the full map.
                 try {
                     const res = await fetch('/api/permissions');
                     if (res.ok) {
                         const data = await res.json();
                         const role = session.user.role;
-                        // Check if role has inventory.delete
-                        // Note: The API returns { permissions: { ROLE: { perm: bool } } }
                         const hasPerm = data.data.permissions[role]?.['inventory.delete'];
-                        // Also ADMIN fallback if needed
                         setCanDelete(!!hasPerm || role === 'ADMIN');
                     }
                 } catch (e) {
@@ -150,7 +157,7 @@ export default function DashboardPage() {
     }, [session]);
 
     const handleDeleteClick = (e: React.MouseEvent, id: string) => {
-        e.stopPropagation(); // Prevent row click
+        e.stopPropagation();
         setDeleteModal({ isOpen: true, itemId: id });
     };
 
@@ -174,11 +181,9 @@ export default function DashboardPage() {
     const handleExport = async () => {
         try {
             const params = new URLSearchParams({
-                // page: '1',  <-- Not needed for limit=-1, but keeps API happy
-                limit: '-1', // Fetch ALL records
+                limit: '-1',
                 search: searchTerm,
                 status: statusFilter !== 'ALL' ? statusFilter : '',
-                // view: 'summary' <-- REMOVED: We want RAW history data for grouping
             });
 
             if (dateRange) {
@@ -190,9 +195,6 @@ export default function DashboardPage() {
             if (!res.ok) throw new Error('Export failed');
 
             const response = await res.json();
-            // API returns { data: [...] } or { items: [...] } depending on structure. 
-            // Our API for raw list returns array directly or inside items?
-            // Let's check api/inventory/route.ts -> It returns { items: [...], pagination: ... } for non-summary view too.
             const data = response.data?.items || (response.data && Array.isArray(response.data) ? response.data : []) || response.items || [];
 
             if (!data.length) {
@@ -200,7 +202,6 @@ export default function DashboardPage() {
                 return;
             }
 
-            // Use the new Excel Export Utility
             const { exportToExcel } = await import('@/lib/excel-export');
             await exportToExcel(data);
 
@@ -310,7 +311,7 @@ export default function DashboardPage() {
 
                     <DateRangePicker
                         onChange={(range) => setDateRange(range)}
-                        initialRange={undefined}
+                        initialRange={dateRange || undefined}
                     />
 
                     {/* Status Dropdown */}
@@ -367,24 +368,26 @@ export default function DashboardPage() {
                     </button>
 
                     {/* Admin Only: Show Deleted Items Toggle */}
-                    {session?.user?.role === 'ADMIN' && (
-                        <button
-                            onClick={() => setShowDeleted(!showDeleted)}
-                            className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${showDeleted
-                                ? 'bg-red-500/10 border-red-500/50 text-red-600'
-                                : 'border-input bg-background text-muted-foreground hover:bg-accent'
-                                }`}
-                            title={t('show_deleted_tooltip')}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            {showDeleted ? t('hide_deleted') : t('show_deleted')}
-                        </button>
-                    )}
-                </div>
-            </div>
+                    {
+                        session?.user?.role === 'ADMIN' && (
+                            <button
+                                onClick={() => setShowDeleted(!showDeleted)}
+                                className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${showDeleted
+                                    ? 'bg-red-500/10 border-red-500/50 text-red-600'
+                                    : 'border-input bg-background text-muted-foreground hover:bg-accent'
+                                    }`}
+                                title={t('show_deleted_tooltip')}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                {showDeleted ? t('hide_deleted') : t('show_deleted')}
+                            </button>
+                        )
+                    }
+                </div >
+            </div >
 
             {/* Data Table */}
-            <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+            < div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm" >
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-muted/50 text-xs uppercase text-muted-foreground border-b border-border">
@@ -609,7 +612,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             <DeleteConfirmModal
                 isOpen={deleteModal.isOpen}
@@ -633,6 +636,6 @@ export default function DashboardPage() {
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
             />
-        </div>
+        </div >
     );
 }

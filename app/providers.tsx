@@ -7,7 +7,7 @@ import { ToastProvider } from '@/components/toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <SessionProvider>
+        <SessionProvider refetchInterval={5 * 60}>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
                 <LanguageProvider>
                     <ToastProvider>

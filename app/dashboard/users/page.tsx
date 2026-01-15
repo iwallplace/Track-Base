@@ -56,13 +56,32 @@ export default function UsersPage() {
     const canManageUsers = ['ADMIN', 'IME', 'KALITE'].includes(session?.user?.role || '');
 
     const fetchUsers = async () => {
-        const res = await fetch(`/api/users?showDeleted=${showDeleted}`);
-        if (res.ok) {
-            const response = await res.json();
-            const data = response.data || response;
-            setUsers(Array.isArray(data) ? data : []);
+        try {
+            const res = await fetch(`/api/users?showDeleted=${showDeleted}`);
+            if (res.ok) {
+                const response = await res.json();
+                const data = response.data || response;
+                setUsers(Array.isArray(data) ? data : []);
+            } else {
+                if (res.status === 401) {
+                    // Session expired or invalid
+                    console.error("Users fetch 401: Unauthorized");
+                    // Force refresh or redirect? 
+                    // Let's just toast for now to confirm diagnosis
+                    showToast(t('session_expired') || "Oturum süresi doldu, lütfen sayfayı yenileyin", 'error');
+                } else if (res.status === 429) {
+                    showToast(t('rate_limit') || "Çok fazla istek, lütfen bekleyin", 'info');
+                } else {
+                    console.error("Users fetch failed:", res.status);
+                    showToast(t('error_fetch') || "Veri yüklenemedi", 'error');
+                }
+            }
+        } catch (error) {
+            console.error("Users fetch network error:", error);
+            showToast(t('conn_error'), 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const fetchPermissions = async () => {

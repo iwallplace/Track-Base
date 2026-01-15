@@ -209,6 +209,11 @@ export const translations = {
         audit_logs: 'Sistem Kayıtları (Audit Logs)',
         details: 'Detaylar',
         showing_last_100: 'Son 100 işlem gösteriliyor',
+
+        // API Errors
+        session_expired: 'Oturum süresi doldu, lütfen sayfayı yenileyin',
+        rate_limit: 'Çok fazla istek, lütfen bekleyin',
+        error_fetch: 'Veri yüklenemedi',
     },
     en: {
         // Navigation
@@ -415,6 +420,11 @@ export const translations = {
         audit_logs: 'System Logs (Audit Logs)',
         details: 'Details',
         showing_last_100: 'Showing last 100 transactions',
+
+        // API Errors
+        session_expired: 'Session expired, please refresh the page',
+        rate_limit: 'Too many requests, please wait',
+        error_fetch: 'Failed to fetch data',
     }
 };
 

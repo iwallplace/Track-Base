@@ -14,11 +14,21 @@ interface DateRangePickerProps {
     initialRange?: DateRange;
 }
 
+
+
+export const getDefaultDateRange = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { startDate: start.toLocaleDateString('en-CA'), endDate: now.toLocaleDateString('en-CA') };
+};
+
 export default function DateRangePicker({ onChange, initialRange }: DateRangePickerProps) {
     const { t, language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
 
-    // Define presets inside component to use translations
+    // Re-create presets here for usage (using hook data) or just hardcode for internal use if needed.
+    // Ideally we want to use the hook translations.
+
     const PRESETS = [
         {
             label: t('today') || 'Today',
@@ -41,8 +51,6 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
             getValue: () => {
                 const now = new Date();
                 const day = now.getDay(); // 0 is Sunday
-                // Adjust for Monday start if needed, but assuming standard Sunday start logic for now or simple diff
-                // Basic logic: start of week (Sunday or Monday)
                 const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
                 const start = new Date(now.setDate(diff));
                 const end = new Date();
@@ -82,7 +90,7 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
         }
     ];
 
-    const [range, setRange] = useState<DateRange>(initialRange || PRESETS[3].getValue()); // Default: Bu Ay
+    const [range, setRange] = useState<DateRange>(initialRange || getDefaultDateRange()); // Default: Bu Ay
     const [activePreset, setActivePreset] = useState<string>(t('this_month') || 'This Month');
     const [isDateInputActive, setIsDateInputActive] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

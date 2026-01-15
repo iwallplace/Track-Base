@@ -58,7 +58,7 @@ export default function StockCountPage() {
                 setItems(Array.from(aggregated.values()));
             }
         } catch (error) {
-            console.error(error);
+            console.error("Stock Count Load Error:", error);
             showToast('Envanter yüklenemedi', 'error');
         } finally {
             setLoading(false);
