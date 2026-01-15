@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ConfirmModal from '@/components/confirm-modal';
 
 interface StockCountItem {
     id: string; // materialReference
@@ -61,6 +62,7 @@ export default function StockCountPage() {
     // Today's Session State for Landing Page
     const [todayStatus, setTodayStatus] = useState<'LOADING' | 'EXISTS' | 'NONE'>('LOADING');
     const [todaySessionData, setTodaySessionData] = useState<any>(null);
+    const [endSessionModal, setEndSessionModal] = useState<{ isOpen: boolean; sessionId: string | null }>({ isOpen: false, sessionId: null });
 
     // Initial Load - Check both history and today's status
     useEffect(() => {
@@ -153,36 +155,35 @@ export default function StockCountPage() {
         }
     };
 
-    const endSession = async () => {
-        if (!sessionId) return;
+    const handleConfirmEndSession = async () => {
+        const sid = endSessionModal.sessionId;
+        if (!sid) return;
 
-        if (!confirm('Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-            return;
-        }
-
+        setEndSessionModal({ isOpen: false, sessionId: null });
         setLoading(true);
+
         try {
             const res = await fetch('/api/stock-count/session', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, action: 'complete' })
+                body: JSON.stringify({ sessionId: sid, action: 'complete' })
             });
 
             if (res.ok) {
                 showToast('Sayım tamamlandı', 'success');
                 setTodaySessionData((prev: any) => ({ ...prev, status: 'COMPLETED' }));
-                setActiveTab('history');
                 loadHistory();
             } else {
                 showToast('Sayım tamamlanamadı', 'error');
             }
         } catch (error) {
-            console.error("End session error:", error);
-            showToast('Bir hata oluştu', 'error');
+            showToast('Bağlantı hatası', 'error');
         } finally {
             setLoading(false);
         }
     };
+
+
 
     const loadInventoryWithSession = async (existingEntries: any[]) => {
         try {
@@ -583,27 +584,13 @@ export default function StockCountPage() {
                                         {todaySessionData?.status !== 'COMPLETED' && (
                                             <button
                                                 onClick={() => {
-                                                    // First load the session to get sessionId
                                                     const today = format(new Date(), 'yyyy-MM-dd');
                                                     fetch(`/api/stock-count/session?date=${today}`)
                                                         .then(res => res.json())
                                                         .then(data => {
                                                             if (data?.id) {
                                                                 setSessionId(data.id);
-                                                                // Then call endSession
-                                                                if (confirm('Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-                                                                    fetch('/api/stock-count/session', {
-                                                                        method: 'PATCH',
-                                                                        headers: { 'Content-Type': 'application/json' },
-                                                                        body: JSON.stringify({ sessionId: data.id, action: 'complete' })
-                                                                    }).then(res => {
-                                                                        if (res.ok) {
-                                                                            showToast('Sayım tamamlandı', 'success');
-                                                                            setTodaySessionData((prev: any) => ({ ...prev, status: 'COMPLETED' }));
-                                                                            loadHistory();
-                                                                        }
-                                                                    });
-                                                                }
+                                                                setEndSessionModal({ isOpen: true, sessionId: data.id });
                                                             }
                                                         });
                                                 }}
@@ -1021,6 +1008,16 @@ export default function StockCountPage() {
                     )}
                 </>
             )}
+            {/* End Session Confirm Modal */}
+            <ConfirmModal
+                isOpen={endSessionModal.isOpen}
+                onClose={() => setEndSessionModal({ isOpen: false, sessionId: null })}
+                onConfirm={handleConfirmEndSession}
+                title="Sayımı Bitir"
+                description="Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz ve sonuçlar kesinleşecektir."
+                confirmText="Bitir"
+                variant="danger"
+            />
         </div>
     );
 }

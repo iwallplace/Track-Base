@@ -5,6 +5,7 @@ import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pen
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
 import DeleteConfirmModal from '@/components/delete-confirm-modal';
+import ConfirmModal from '@/components/confirm-modal';
 import { useToast } from '@/components/toast';
 import { useLanguage } from '@/components/language-provider';
 
@@ -53,6 +54,7 @@ export default function UsersPage() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, userId: null as string | null });
+    const [roleDeleteModal, setRoleDeleteModal] = useState({ isOpen: false, roleId: '' });
 
     // Dynamic permissions state
     const [permissionsData, setPermissionsData] = useState<PermissionsData | null>(null);
@@ -143,7 +145,6 @@ export default function UsersPage() {
     };
 
     const handleDeleteRole = async (id: string) => {
-        if (!confirm("Bu rolü silmek istediğinize emin misiniz?")) return;
         try {
             const res = await fetch(`/api/roles?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
@@ -380,7 +381,7 @@ export default function UsersPage() {
                                                 </div>
                                                 {!['ADMIN', 'USER'].includes(role.name) && (
                                                     <button
-                                                        onClick={() => handleDeleteRole(role.id)}
+                                                        onClick={() => setRoleDeleteModal({ isOpen: true, roleId: role.id })}
                                                         className="text-muted-foreground hover:text-red-500"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -623,6 +624,17 @@ export default function UsersPage() {
                     </tbody>
                 </table>
             </div>
+            {/* Role Delete Confirm Modal */}
+            <ConfirmModal
+                isOpen={roleDeleteModal.isOpen}
+                onClose={() => setRoleDeleteModal({ isOpen: false, roleId: '' })}
+                onConfirm={() => handleDeleteRole(roleDeleteModal.roleId)}
+                title="Rol Silme Onayı"
+                description="Bu rolü silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+                confirmText="Sil"
+                cancelText="İptal"
+                variant="danger"
+            />
         </div>
     );
 }

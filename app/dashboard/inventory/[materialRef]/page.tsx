@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Calendar, FileText, Trash2, Search, AlertTriangle, ExternalLink, Eye, X } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Trash2, Search, AlertTriangle, ExternalLink, Eye, X, Activity, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-provider';
@@ -233,11 +233,84 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                 )
             }
 
+            {/* Last Transaction Highlight - Only show when not searching */}
+            {!searchQuery && filteredItems.length > 0 && (
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                        <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
+                            <Activity className="h-4 w-4" />
+                        </div>
+                        <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Son İşlem</h3>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl border border-blue-200/50 dark:border-blue-500/20 bg-gradient-to-br from-white to-blue-50/50 dark:from-card dark:to-blue-950/10 shadow-lg shadow-blue-500/5">
+                        <div className="absolute top-0 right-0 p-3 opacity-10">
+                            <Activity className="h-24 w-24 text-blue-500 rotate-12" />
+                        </div>
+
+                        <div className="relative p-6 sm:p-8">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                                        <span className="px-3 py-1 rounded-full bg-background border border-border shadow-sm flex items-center gap-2 text-foreground font-medium">
+                                            <Calendar className="h-4 w-4 text-blue-500" />
+                                            {new Date(filteredItems[0].date).toLocaleDateString("tr-TR")}
+                                        </span>
+                                        <span className="text-muted-foreground">{new Date(filteredItems[0].createdAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-3xl font-bold text-foreground tracking-tight">{filteredItems[0].company}</h4>
+                                        <div className="mt-2 flex items-center gap-3 text-muted-foreground">
+                                            <span className="font-mono bg-muted px-2 py-0.5 rounded text-sm">{filteredItems[0].waybillNo}</span>
+                                            {filteredItems[0].waybillUrl && (
+                                                <button
+                                                    onClick={() => setPdfPreviewUrl(filteredItems[0].waybillUrl!)}
+                                                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                                                >
+                                                    <Eye className="h-3 w-3" />
+                                                    İrsaliye Görüntüle
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {filteredItems[0].note && (
+                                        <div className="p-4 rounded-xl bg-white/50 dark:bg-black/20 border border-blue-100 dark:border-blue-900/30 text-sm italic text-muted-foreground max-w-xl">
+                                            "{filteredItems[0].note}"
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col items-start md:items-end gap-2 min-w-[140px]">
+                                    <div className="text-4xl font-extrabold text-foreground tracking-tighter">
+                                        {filteredItems[0].stockCount.toLocaleString()}
+                                        <span className="text-lg font-medium text-muted-foreground ml-1">{t('pcs')}</span>
+                                    </div>
+                                    <div className={`px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 ${getStatusColor(filteredItems[0].lastAction)} bg-current/10 border border-current/20`}>
+                                        {filteredItems[0].lastAction === 'Giriş' ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                                        {getStatusLabel(filteredItems[0].lastAction)}
+                                    </div>
+                                    <div className="mt-4 text-xs text-muted-foreground text-right">
+                                        işlemi yapan: <br />
+                                        <span className="font-medium text-foreground">{filteredItems[0].modifierName || 'Sistem'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
                 <div className="p-6 border-b border-border flex items-center justify-between">
-                    <h3 className="font-semibold text-foreground">{t('movement_records')}</h3>
+                    <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        {t('movement_records')}
+                    </h3>
                     <div className="text-sm text-muted-foreground">
-                        {filteredItems.length} {t('records')}
+                        {!searchQuery ? filteredItems.length - 1 : filteredItems.length} {t('records')}
+                        {!searchQuery && filteredItems.length > 0 && <span className="ml-1 text-xs opacity-70">(Son işlem yukarıda)</span>}
                     </div>
                 </div>
 
@@ -249,7 +322,7 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                     </div>
                 ) : (
                     <div className="divide-y divide-border">
-                        {filteredItems.map((item) => (
+                        {(searchQuery ? filteredItems : filteredItems.slice(1)).map((item) => (
                             <div
                                 key={item.id}
                                 id={`row-${item.id}`}
