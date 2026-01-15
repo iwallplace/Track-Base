@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,8 +14,25 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
 
+    // Load remembered username on mount
+    useEffect(() => {
+        const rememberedUsername = localStorage.getItem('rememberedUsername');
+        if (rememberedUsername) {
+            setUsername(rememberedUsername);
+            setRememberMe(true);
+        }
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Save or clear remembered username
+        if (rememberMe) {
+            localStorage.setItem('rememberedUsername', username);
+        } else {
+            localStorage.removeItem('rememberedUsername');
+        }
+
         const res = await signIn('credentials', {
             username,
             password,
