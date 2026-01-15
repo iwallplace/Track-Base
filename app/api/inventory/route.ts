@@ -188,7 +188,30 @@ export async function GET(req: Request) {
                 take: fetchLimit
             });
 
-            // 4. Process candidates
+            // 4. Pre-fetch Sums for ALL Candidates (Single Query Optimization)
+            const candidateRefs = distinctMaterials.map(m => m.materialReference);
+            const allSums = await prisma.inventoryItem.groupBy({
+                by: ['materialReference', 'lastAction'],
+                where: {
+                    ...baseWhere, // Use baseWhere to respect date ranges and delete flags
+                    materialReference: { in: candidateRefs }
+                },
+                _sum: { stockCount: true }
+            });
+
+            // Convert sums to Map for O(1) Access
+            const balanceMap = new Map<string, number>();
+            allSums.forEach(group => {
+                const current = balanceMap.get(group.materialReference) || 0;
+                const value = group._sum.stockCount || 0;
+                if (group.lastAction === 'Giriş') {
+                    balanceMap.set(group.materialReference, current + value);
+                } else if (group.lastAction === 'Çıkış') {
+                    balanceMap.set(group.materialReference, current - value);
+                }
+            });
+
+            // 5. Process candidates (Memory Efficient)
             const processedResults = await Promise.all(distinctMaterials.map(async (mat) => {
                 const ref = mat.materialReference;
 
@@ -205,22 +228,10 @@ export async function GET(req: Request) {
                     return null;
                 }
 
-                // C. Calculate Balance
-                const deletedAtFilter = baseWhere.deletedAt;
-                const [entrySum, exitSum] = await Promise.all([
-                    prisma.inventoryItem.aggregate({
-                        _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Giriş', deletedAt: deletedAtFilter }
-                    }),
-                    prisma.inventoryItem.aggregate({
-                        _sum: { stockCount: true },
-                        where: { materialReference: ref, lastAction: 'Çıkış', deletedAt: deletedAtFilter }
-                    })
-                ]);
+                // C. Get Pre-calculated Balance
+                const balance = balanceMap.get(ref) || 0;
 
-                const entryCount = entrySum._sum?.stockCount ?? 0;
-                const exitCount = exitSum._sum?.stockCount ?? 0;
-                const balance = entryCount - exitCount;
+
 
                 // D. Stock Status Filter Check (CRITICAL)
                 if (stockStatus) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
@@ -50,6 +50,9 @@ export default function StockCountPage() {
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
     const [countDate, setCountDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [savingItem, setSavingItem] = useState<string | null>(null);
+
+    // Debounce Ref
+    const saveTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
     // New States for History View
     const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
@@ -244,8 +247,18 @@ export default function StockCountPage() {
         if (value !== '') {
             const item = items.find(i => i.id === id);
             if (item) {
-                // We pass item.systemStock to ensure we snapshot the correct system stock at time of count
-                saveCount(id, numValue, item.systemStock);
+                // Clear existing timeout
+                if (saveTimeouts.current.has(id)) {
+                    clearTimeout(saveTimeouts.current.get(id)!);
+                }
+
+                // Set new timeout
+                const timeout = setTimeout(() => {
+                    saveCount(id, numValue, item.systemStock);
+                    saveTimeouts.current.delete(id);
+                }, 1000); // 1s delay
+
+                saveTimeouts.current.set(id, timeout);
             }
         }
     };
@@ -796,8 +809,8 @@ export default function StockCountPage() {
                                                                     {item.materialReference}
                                                                     {item.material?.abcClass && (
                                                                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${item.material.abcClass === 'A' ? 'bg-green-100 text-green-700 border-green-200' :
-                                                                                item.material.abcClass === 'B' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                                                    'bg-slate-100 text-slate-700 border-slate-200'
+                                                                            item.material.abcClass === 'B' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                                                'bg-slate-100 text-slate-700 border-slate-200'
                                                                             }`}>
                                                                             {item.material.abcClass}
                                                                         </span>
