@@ -27,13 +27,21 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
         stockCount: number | '';
         lastAction: 'Giriş' | 'Çıkış';
         note: string;
+        aisle?: string;
+        shelf?: string;
+        barcode?: string;
+        qcRequired?: boolean;
     }>({
         company: '',
         waybillNo: '',
         materialReference: '',
         stockCount: '',
         lastAction: mode,
-        note: ''
+        note: '',
+        aisle: '',
+        shelf: '',
+        barcode: '',
+        qcRequired: false
     });
 
     // Reset/Update form when mode changes or modal opens
@@ -211,6 +219,54 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                             />
                         </div>
                     </div>
+
+                    {/* New Fields Section */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Depo Konumu (Raf/Sıra)</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Raf (A1)"
+                                    value={formData.aisle || ''}
+                                    onChange={(e) => setFormData({ ...formData, aisle: e.target.value })}
+                                    className="w-1/2 rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Sıra (01)"
+                                    value={formData.shelf || ''}
+                                    onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}
+                                    className="w-1/2 rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none uppercase"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-muted-foreground">Barkod (Opsiyonel)</label>
+                            <input
+                                type="text"
+                                placeholder="Barkod Okutunuz"
+                                value={formData.barcode || ''}
+                                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                                className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {mode === 'Giriş' && (
+                        <div className="flex items-center gap-2 pt-2">
+                            <input
+                                type="checkbox"
+                                id="qcRequired"
+                                checked={formData.qcRequired || false}
+                                onChange={(e) => setFormData({ ...formData, qcRequired: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor="qcRequired" className="text-sm font-medium text-foreground cursor-pointer select-none">
+                                Kalite Kontrol Gerektirir
+                            </label>
+                        </div>
+                    )}
 
                     <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-border">
                         <button

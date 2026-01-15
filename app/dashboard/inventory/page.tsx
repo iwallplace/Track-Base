@@ -23,6 +23,9 @@ interface InventoryItem {
     stockCount: number; // Balance
     lastAction: string;
     note: string;
+    qcStatus?: string;
+    location?: string;
+    barcode?: string;
 }
 
 export default function DashboardPage() {
@@ -371,6 +374,8 @@ export default function DashboardPage() {
                                 <th className="px-6 py-4 font-medium">{t('col_date')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_company')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_waybill')}</th>
+                                <th className="px-6 py-4 font-medium">Konum</th>
+                                <th className="px-6 py-4 font-medium">Kalite</th>
                                 <th className="px-6 py-4 font-medium">{t('col_reference')}</th>
                                 <th className="px-6 py-4 font-medium text-right text-blue-600">{t('col_stock')}</th>
                                 <th className="px-6 py-4 font-medium">{t('col_last_action')}</th>
@@ -414,6 +419,13 @@ export default function DashboardPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 font-mono text-muted-foreground text-xs whitespace-nowrap">{item.waybillNo}</td>
+                                    <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">{item.location || '-'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {item.qcStatus === 'PENDING' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">Bekliyor</span>}
+                                        {item.qcStatus === 'APPROVED' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">Onay</span>}
+                                        {item.qcStatus === 'REJECTED' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800">Red</span>}
+                                        {!item.qcStatus && <span className="text-xs text-muted-foreground">-</span>}
+                                    </td>
                                     <td className="px-6 py-4 font-mono font-medium text-foreground text-sm group-hover:text-blue-600 transition-colors whitespace-nowrap">
                                         {item.materialReference}
                                     </td>

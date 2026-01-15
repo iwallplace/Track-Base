@@ -49,7 +49,16 @@ export const createInventoryItemSchema = z.object({
         .refine(v => Number.isInteger(v), { message: "Stok adedi tam sayı olmalıdır" })
         .refine(v => v > 0, { message: "Stok adedi 0'dan büyük olmalıdır" }),
     lastAction: z.enum(['Giriş', 'Çıkış']).default('Giriş'),
-    note: z.string().trim().max(200, "Not çok uzun").transform(v => v.toLocaleUpperCase('tr-TR')).optional()
+    note: z.string().trim().max(200, "Not çok uzun").transform(v => v.toLocaleUpperCase('tr-TR')).optional(),
+
+    // New Fields
+    qcRequired: z.boolean().default(false).optional(),
+    qcStatus: z.enum(['PENDING', 'APPROVED', 'REJECTED']).default('PENDING').optional(),
+    qcNote: z.string().optional(),
+    location: z.string().optional(),
+    aisle: z.string().optional(),
+    shelf: z.string().optional(),
+    barcode: z.string().optional()
 });
 
 // ==================== PROFILE SCHEMAS ====================

@@ -358,7 +358,14 @@ export async function POST(req: Request) {
                     stockCount: data.stockCount,
                     lastAction: data.lastAction || "Giriş",
                     note: data.note || "",
-                    lastModifiedBy: session.user.id
+                    lastModifiedBy: session.user.id,
+                    // New Fields
+                    qcRequired: data.qcRequired || false,
+                    qcStatus: data.qcRequired ? "PENDING" : "PENDING", // Default, but logical if not required? Maybe APPROVED if not required? Actually schema default is PENDING.
+                    location: (data.aisle || data.shelf) ? `${data.aisle || ''}-${data.shelf || ''}` : undefined,
+                    aisle: data.aisle,
+                    shelf: data.shelf,
+                    barcode: data.barcode
                 }
             });
 

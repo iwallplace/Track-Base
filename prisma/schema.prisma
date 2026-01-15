@@ -44,6 +44,19 @@ model InventoryItem {
   // Optional: Relation to user who performed the last action
   lastModifiedBy    String? 
 
+  // Quality Control
+  qcRequired Boolean  @default(false)
+  qcStatus   String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  qcNote     String?
+
+  // Warehouse / Addressing
+  location   String?
+  aisle      String?
+  shelf      String?
+
+  // Barcode
+  barcode    String? @unique 
+
   @@index([materialReference])
   @@index([company])
   @@index([waybillNo])
