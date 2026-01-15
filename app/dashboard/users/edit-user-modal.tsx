@@ -18,7 +18,7 @@ interface EditUserModalProps {
     roles?: { id: string; name: string; label: string; }[];
 }
 
-export default function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModalProps) {
+export default function EditUserModal({ isOpen, onClose, onSuccess, user, roles }: EditUserModalProps) {
     const { showToast } = useToast();
     const { t } = useLanguage();
     const [formData, setFormData] = useState({
