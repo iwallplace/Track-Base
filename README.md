@@ -111,6 +111,34 @@ inventory-app/
 
 ---
 
+## ☁️ Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
+
+### Option 1: One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fiwallplace%2FTrack-Base&env=DATABASE_URL,NEXTAUTH_SECRET,GOOGLE_API_KEY&envDescription=Enter%20your%20database%20connection%20string%20and%20API%20keys&project-name=track-base&repository-name=track-base)
+
+### Option 2: Manual Deployment
+
+1.  Push your code to a Git repository (GitHub, GitLab, Bitbucket).
+2.  Import your project into Vercel.
+3.  **Environment Variables:** Add the following variables in the Vercel Project Settings:
+    *   `DATABASE_URL`: Your PostgreSQL connection string (e.g. Supabase).
+    *   `NEXTAUTH_SECRET`: A random string for authentication security.
+    *   `NEXTAUTH_URL`: Your Vercel domain (e.g. `https://your-project.vercel.app`).
+    *   `GOOGLE_API_KEY`: API Key for Gemini AI features.
+
+4.  **Build Command:**
+    Vercel automatically detects Next.js. However, to ensure your database schema is up-to-date, override the **Build Command** in settings:
+    ```bash
+    npx prisma db push && next build
+    ```
+
+5.  Click **Deploy**!
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE). All rights reserved © 2026.
