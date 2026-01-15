@@ -16,10 +16,10 @@ import MaterialSettingsModal from '@/components/material-settings-modal';
 interface Material {
     reference: string;
     minStock: number;
-    abcClass?: string;
-    defaultLocation?: string;
+    abcClass?: string | null;
+    defaultLocation?: string | null;
     unit?: string;
-    description?: string;
+    description?: string | null;
 }
 
 interface InventoryItem {
@@ -39,6 +39,7 @@ interface InventoryItem {
     location?: string;
     barcode?: string;
     waybillUrl?: string;
+    material?: Material | null;
 }
 
 export default function DashboardPage() {
@@ -48,7 +49,7 @@ export default function DashboardPage() {
     const [items, setItems] = useState<InventoryItem[]>([]);
 
     // Material Metadata State
-    const [materialsMap, setMaterialsMap] = useState<Map<string, Material>>(new Map());
+
 
     // Filters & Pagination State
     const [searchTerm, setSearchTerm] = useState("");
@@ -115,25 +116,8 @@ export default function DashboardPage() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Fetch Material Definitions
-    useEffect(() => {
-        const fetchMaterials = async () => {
-            try {
-                const res = await fetch('/api/materials');
-                if (res.ok) {
-                    const data = await res.json();
-                    const map = new Map();
-                    if (data.data && Array.isArray(data.data)) {
-                        data.data.forEach((m: Material) => map.set(m.reference, m));
-                    }
-                    setMaterialsMap(map);
-                }
-            } catch (error) {
-                console.error("Failed to fetch material definitions", error);
-            }
-        };
-        fetchMaterials();
-    }, [isSettingsModalOpen]); // Refresh when settings modal closes
+    // Fetch Materials Effect Removed - Data now comes from /api/inventory
+
 
     const fetchItems = async () => {
         try {
@@ -294,8 +278,7 @@ export default function DashboardPage() {
         return status;
     };
 
-    // Helper to get Material Data
-    const getMaterial = (ref: string) => materialsMap.get(ref);
+
 
     // Updated ABC Badge Color - Premium Look
     const getAbcColor = (cls?: string) => {
@@ -557,7 +540,7 @@ export default function DashboardPage() {
                                 </tr>
                             )}
                             {items.map((item) => {
-                                const material = getMaterial(item.materialReference);
+                                const material = item.material;
                                 const isLowStock = material && item.stockCount <= material.minStock;
                                 const abcClass = material?.abcClass;
 

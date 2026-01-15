@@ -28,6 +28,14 @@ interface InventorySummary {
     note: string;
     lastModifiedBy: string | null;
     modifierName?: string;
+    // New Fields
+    material?: {
+        abcClass: string | null;
+        minStock: number;
+        unit: string;
+        defaultLocation: string | null;
+        description: string | null;
+    } | null;
 }
 
 export async function GET(req: Request) {
@@ -268,10 +276,28 @@ export async function GET(req: Request) {
             });
             const userMap = new Map(users.map(u => [u.id, u.name]));
 
-            const finalItems = finalProcessed.map(item => ({
-                ...item,
-                modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem'
-            }));
+            // 6. Fetch Material Metadata for these items
+            const materialRefs = [...new Set(finalProcessed.map(i => i.materialReference))];
+            const materials = await prisma.material.findMany({
+                where: { reference: { in: materialRefs } },
+                select: { reference: true, abcClass: true, minStock: true, unit: true, defaultLocation: true, description: true }
+            });
+            const materialMap = new Map(materials.map(m => [m.reference, m]));
+
+            const finalItems = finalProcessed.map(item => {
+                const material = materialMap.get(item.materialReference);
+                return {
+                    ...item,
+                    modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem',
+                    material: material ? {
+                        abcClass: material.abcClass,
+                        minStock: material.minStock,
+                        unit: material.unit,
+                        defaultLocation: material.defaultLocation,
+                        description: material.description
+                    } : null
+                };
+            });
 
             return successResponse({
                 items: finalItems,
