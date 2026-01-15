@@ -598,8 +598,8 @@ export default function StockCountPage() {
                         <>
                             {/* Stats Cards - Same as before */}
                             {!blindMode ? (
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    <div className="rounded-xl border border-border bg-card p-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+                                    <div className="col-span-2 lg:col-span-1 rounded-xl border border-border bg-card p-4">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-blue-500/10">
                                                 <Package className="h-5 w-5 text-blue-500" />

@@ -352,8 +352,8 @@ export default function DashboardPage() {
 
             {/* Filters Bar */}
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <div className="flex flex-wrap items-center gap-4">
-                    <div className="relative flex-1 min-w-[200px]">
+                <div className="flex flex-col md:flex-row flex-wrap items-stretch md:items-center gap-4">
+                    <div className="relative w-full md:flex-1 md:min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"

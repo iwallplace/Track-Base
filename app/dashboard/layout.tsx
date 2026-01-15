@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Users, Settings, BookOpen, LogOut, ClipboardList, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Settings, BookOpen, LogOut, ClipboardList, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { ModeToggle } from '@/components/theme-toggle';
 import { NotificationsPopover } from '@/components/notifications-popover';
@@ -19,6 +19,7 @@ export default function DashboardLayoutContent({
     const pathname = usePathname();
     const { data: session } = useSession();
     const [collapsed, setCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { t } = useLanguage();
 
     const navigation = [
@@ -50,8 +51,17 @@ export default function DashboardLayoutContent({
 
     return (
         <div className="min-h-screen bg-background text-foreground flex">
+            {/* Mobile Overlay */}
+            {mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 md:hidden backdrop-blur-sm transition-opacity"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full'
+                } ${collapsed ? 'md:w-20' : 'md:w-64'}`}>
 
                 {/* Logo */}
                 <div className="flex h-16 items-center px-6 border-b border-border">
@@ -89,10 +99,10 @@ export default function DashboardLayoutContent({
                         );
                     })}
 
-                    {/* Collapse Toggle Button */}
+                    {/* Collapse Toggle Button (Desktop Only) */}
                     <button
                         onClick={() => setCollapsed(!collapsed)}
-                        className={`mt-4 flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground ${collapsed ? 'justify-center' : ''}`}
+                        className={`hidden md:flex mt-4 items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground ${collapsed ? 'justify-center' : ''}`}
                         title={collapsed ? 'Menüyü Genişlet' : 'Menüyü Küçült'}
                     >
                         {collapsed ? (
@@ -137,10 +147,17 @@ export default function DashboardLayoutContent({
             </aside>
 
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col transition-all duration-300 ${collapsed ? 'ml-20' : 'ml-64'}`}>
+            <div className={`flex-1 flex flex-col transition-all duration-300 ${collapsed ? 'md:ml-20' : 'md:ml-64'}`}>
                 {/* Header */}
-                <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 z-30">
+                <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 z-30 sticky top-0">
                     <div className="flex items-center gap-3 text-muted-foreground">
+                        {/* Mobile Menu Button */}
+                        <button
+                            className="md:hidden p-2 -ml-2 text-foreground hover:bg-muted rounded-md"
+                            onClick={() => setMobileMenuOpen(true)}
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
                         <LayoutDashboard className="h-5 w-5" />
                         <span className="font-medium text-foreground capitalize">{getPageTitle(pathname)}</span>
                     </div>
