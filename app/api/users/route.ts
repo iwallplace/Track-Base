@@ -34,11 +34,10 @@ export async function GET(req: Request) {
     try {
         const where: any = {};
 
-        // Soft Delete Logic
-        if (showDeleted && session.user.role === 'ADMIN') {
-            // Admin asked for deleted: Show deleted + active? Or just deleted? 
-            // Usually simpler to show ALL or just deleted.
-            // Let's mimic Inventory: if showDeleted=true, show deleted items.
+        // Soft Delete Logic - RBAC: data.view izin kontrolü
+        const canViewAllData = await hasPermission(session.user.role || 'USER', 'data.view');
+        if (showDeleted && canViewAllData) {
+            // Users with data.view can see deleted items
             where.deletedAt = { not: null };
         } else {
             // Default: active only
@@ -169,9 +168,12 @@ export async function DELETE(req: Request) {
 
 export async function PATCH(req: Request) {
     const session = await getServerSession(authOptions);
+    if (!session) return unauthorizedResponse();
 
-    if (!session || session.user.role !== 'ADMIN') {
-        return forbiddenResponse("Sadece Project Owner kullanıcıları geri yükleyebilir");
+    // RBAC: users.restore izin kontrolü
+    const canRestoreUsers = await hasPermission(session.user.role || 'USER', 'users.restore');
+    if (!canRestoreUsers) {
+        return forbiddenResponse("Kullanıcı geri yükleme yetkiniz bulunmamaktadır");
     }
 
     try {

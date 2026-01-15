@@ -277,7 +277,11 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                                 {selectedMetric === 'lowStock' ? (
                                     <div className="space-y-2">
                                         {(data.allLowStockItems || data.lowStockItems || []).map((item) => (
-                                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 transition-colors">
+                                            <div
+                                                key={item.id}
+                                                onClick={() => router.push(`/dashboard/inventory?search=${encodeURIComponent(item.materialReference)}`)}
+                                                className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                            >
                                                 <div>
                                                     <div className="font-medium text-foreground">{item.materialReference}</div>
                                                     <div className="text-xs text-muted-foreground">{item.company}</div>
@@ -295,7 +299,11 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                                 ) : (
                                     <div className="space-y-2">
                                         {(data.deadStockItems || []).map((item) => (
-                                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors">
+                                            <div
+                                                key={item.id}
+                                                onClick={() => router.push(`/dashboard/inventory?search=${encodeURIComponent(item.materialReference)}`)}
+                                                className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                            >
                                                 <div>
                                                     <div className="font-medium text-foreground">{item.materialReference}</div>
                                                     <div className="text-xs text-muted-foreground">{item.company}</div>

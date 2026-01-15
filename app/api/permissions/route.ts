@@ -26,6 +26,7 @@ const PERMISSION_LABELS: Record<string, string> = {
     'users.create': 'Kullanıcı ekleme',
     'users.edit': 'Kullanıcı düzenleme',
     'users.delete': 'Kullanıcı silme',
+    'users.restore': 'Kullanıcı geri yükleme',
     'users.role.change': 'Kullanıcı rolü değiştirme',
     'roles.manage': 'Rol oluşturma ve silme',
 
