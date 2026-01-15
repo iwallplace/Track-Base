@@ -7,17 +7,25 @@ import {
     successResponse,
     errorResponse,
     unauthorizedResponse,
+    forbiddenResponse,
     validationErrorResponse,
     internalErrorResponse,
     notFoundResponse,
     devError
 } from "@/lib/api-response";
+import { hasPermission } from "@/lib/permissions";
 
 export async function PUT(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
         return unauthorizedResponse();
+    }
+
+    // RBAC: settings.edit izin kontrolü
+    const canEdit = await hasPermission(session.user.role || 'USER', 'settings.edit');
+    if (!canEdit) {
+        return forbiddenResponse("Profil düzenleme yetkiniz bulunmamaktadır");
     }
 
     try {

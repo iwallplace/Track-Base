@@ -72,12 +72,13 @@ export async function GET(req: Request) {
 
         // Base Filter: Handle Soft Delete Logic
         if (showDeleted) {
-            // Permission Check for viewing deleted items
-            if (session.user.role !== 'ADMIN') {
-                // Non-admins cannot see deleted items even if they ask
+            // RBAC: data.view izin kontrolü for viewing deleted items
+            const canViewAllData = await hasPermission(session.user.role || 'USER', 'data.view');
+            if (!canViewAllData) {
+                // Users without data.view cannot see deleted items
                 baseWhere.deletedAt = null;
             } else {
-                // Admin asked for deleted items: Show deleted items
+                // Users with data.view can see deleted items
                 baseWhere.deletedAt = { not: null };
             }
         } else {

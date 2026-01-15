@@ -3,12 +3,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/db';
 import { startOfDay, endOfDay } from 'date-fns';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return new NextResponse("Unauthorized", { status: 401 });
+        }
+
+        // RBAC: stock-count.view izin kontrolü
+        const canView = await hasPermission(session.user.role || 'USER', 'stock-count.view');
+        if (!canView) {
+            return new NextResponse("Forbidden", { status: 403 });
         }
 
         const { searchParams } = new URL(req.url);

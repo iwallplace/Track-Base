@@ -1,11 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { unauthorizedResponse, errorResponse, successResponse } from "@/lib/api-response";
+import { unauthorizedResponse, forbiddenResponse, errorResponse, successResponse } from "@/lib/api-response";
+import { hasPermission } from "@/lib/permissions";
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return unauthorizedResponse();
+
+    // RBAC: inventory.view izin kontrolü (documents are inventory-related)
+    const canView = await hasPermission(session.user.role || 'USER', 'inventory.view');
+    if (!canView) return forbiddenResponse("Belgelere erişim yetkiniz yok");
 
     try {
         const { path } = await req.json();

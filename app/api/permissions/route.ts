@@ -38,7 +38,12 @@ const PERMISSION_LABELS: Record<string, string> = {
     'reports.view': 'Raporları görüntüleme',
     'audit.view': 'Sistem kayıtlarını görme',
     'notifications.view': 'Bildirimleri görme',
-    'system.status.view': 'Sistem durumunu görüntüleme'
+    'system.status.view': 'Sistem durumunu görüntüleme',
+
+    // Malzeme & Stok Sayımı
+    'materials.manage': 'Malzeme tanımları düzenleme',
+    'stock-count.view': 'Stok sayımı görüntüleme',
+    'stock-count.manage': 'Stok sayımı yapma'
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -81,7 +86,7 @@ export async function GET() {
 
         const dbRoles = await prisma.role.findMany();
         const roleLabels: Record<string, string> = {};
-        dbRoles.forEach(r => {
+        dbRoles.forEach((r: { name: string; label: string }) => {
             roleLabels[r.name] = r.label;
         });
 

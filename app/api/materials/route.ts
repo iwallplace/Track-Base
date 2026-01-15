@@ -68,9 +68,9 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return unauthorizedResponse();
 
-    // Check permissions (Admin or maybe Quality/IME can set limits)
-    const canManage = session.user.role === 'ADMIN' || session.user.role === 'IME';
-    if (!canManage) return forbiddenResponse("Bu işlem için yetkiniz yok");
+    // RBAC: materials.manage izin kontrolü
+    const canManage = await hasPermission(session.user.role || 'USER', 'materials.manage');
+    if (!canManage) return forbiddenResponse("Malzeme tanımları düzenleme yetkiniz yok");
 
     try {
         const body = await req.json();

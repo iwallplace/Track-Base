@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return new NextResponse("Unauthorized", { status: 401 });
+        }
+
+        // RBAC: stock-count.manage izin kontrolü
+        const canManage = await hasPermission(session.user.role || 'USER', 'stock-count.manage');
+        if (!canManage) {
+            return new NextResponse("Forbidden", { status: 403 });
         }
 
         const body = await req.json();

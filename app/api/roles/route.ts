@@ -88,9 +88,9 @@ export async function DELETE(req: Request) {
 
         if (!role) return errorResponse("Rol bulunamadı", 404);
 
-        // Security: Never allow deleting the 'ADMIN' role validation logic
-        if (role.name === 'ADMIN') {
-            return forbiddenResponse("ADMIN (Project Owner) rolü silinemez.");
+        // Security: Never allow deleting ADMIN or USER roles
+        if (role.name === 'ADMIN' || role.name === 'USER') {
+            return forbiddenResponse("Bu sistem rolü silinemez.");
         }
 
         // Reassign users to 'USER' role

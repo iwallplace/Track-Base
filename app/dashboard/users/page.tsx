@@ -378,7 +378,7 @@ export default function UsersPage() {
                                                     {getRoleBadge(role.name)}
                                                     <span className="text-xs text-muted-foreground font-mono">{role.name}</span>
                                                 </div>
-                                                {role.name !== 'ADMIN' && (
+                                                {!['ADMIN', 'USER'].includes(role.name) && (
                                                     <button
                                                         onClick={() => handleDeleteRole(role.id)}
                                                         className="text-muted-foreground hover:text-red-500"
@@ -386,7 +386,7 @@ export default function UsersPage() {
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
-                                                {role.isSystem && role.name === 'ADMIN' && <span className="text-[10px] bg-muted px-2 py-1 rounded">Sistem</span>}
+                                                {['ADMIN', 'USER'].includes(role.name) && <span className="text-[10px] bg-muted px-2 py-1 rounded">Sistem</span>}
                                             </div>
                                         ))}
                                     </div>
