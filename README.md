@@ -111,6 +111,52 @@ inventory-app/
 
 ---
 
+## ⚙️ Detailed Configuration Guide
+
+### 1. Setting up the Database (Supabase)
+
+To store your inventory data, you need a PostgreSQL database. We recommend Supabase for its ease of use and free tier.
+
+1.  Go to [Supabase](https://supabase.com/) and create a new project.
+2.  Once created, go to **Project Settings** > **Database**.
+3.  Under **Connection String**, select **URI**.
+4.  Copy the connection string. It should look like this:
+    `postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-ID].supabase.co:5432/postgres`
+    *(Make sure to replace `[YOUR-PASSWORD]` with the database password you set during project creation.)*
+5.  Use this value for the `DATABASE_URL` environment variable.
+
+### 2. Getting Gemini AI API Key
+
+The AI assistant feature requires a Google Gemini API Key.
+
+1.  Visit [Google AI Studio](https://aistudio.google.com/).
+2.  Click on **"Get API key"** in the sidebar.
+3.  Click **"Create API key"**.
+4.  Copy the generated key (starts with `AIza...`).
+5.  Use this value for the `GOOGLE_API_KEY` environment variable.
+
+### 3. Setting up the Project Owner (Admin)
+
+When you first install the application, the database will be empty. You need to create an initial admin account.
+
+1.  Open your `.env` file and add the following variables (optional, defaults provided below):
+    ```env
+    ADMIN_EMAIL=your-email@company.com
+    ADMIN_PASSWORD=secure-password
+    ```
+2.  Run the following command in your terminal to seed the database:
+    ```bash
+    npx prisma db seed
+    ```
+3.  This command creates the **Admin (Project Owner)** account.
+    *   **Default Email:** `admin@example.com` (or what you set in .env)
+    *   **Default Password:** `Admin123!` (or what you set in .env)
+
+> [!IMPORTANT]
+> **Change these credentials immediately after logging in** via the User Management panel.
+
+---
+
 ## ☁️ Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
