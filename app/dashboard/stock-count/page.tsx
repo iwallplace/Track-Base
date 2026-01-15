@@ -6,10 +6,12 @@ import { useLanguage } from '@/components/language-provider';
 import { useToast } from '@/components/toast';
 import {
     Search, Save, RotateCcw, CheckCircle, AlertTriangle, Clock, FileSpreadsheet,
-    Download, BarChart3, Package, TrendingUp, TrendingDown, Filter, X, FileText
+    Download, BarChart3, Package, TrendingUp, TrendingDown, Filter, X, FileText, FileIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface StockCountItem {
     id: string;
@@ -157,6 +159,105 @@ export default function StockCountPage() {
         link.download = `fark_raporu_${countDate}.txt`;
         link.click();
         showToast('Fark raporu indirildi', 'success');
+    };
+
+    // PDF Export
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // Header
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('STOK SAYIM RAPORU', pageWidth / 2, 20, { align: 'center' });
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Tarih: ${format(new Date(countDate), 'dd.MM.yyyy')}`, 14, 32);
+        doc.text(`Sayımı Yapan: ${session?.user?.name || 'Bilinmiyor'}`, 14, 38);
+        doc.text(`Oluşturulma: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, pageWidth - 14, 32, { align: 'right' });
+
+        // Summary Box
+        doc.setDrawColor(200);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14, 45, pageWidth - 28, 25, 3, 3, 'FD');
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        const summaryY = 55;
+        doc.text(`Toplam: ${stats.total}`, 20, summaryY);
+        doc.text(`Sayılan: ${items.length - stats.pending}`, 55, summaryY);
+        doc.setTextColor(34, 197, 94);
+        doc.text(`Eşleşen: ${stats.match}`, 95, summaryY);
+        doc.setTextColor(239, 68, 68);
+        doc.text(`Farklı: ${stats.mismatch}`, 135, summaryY);
+        doc.setTextColor(0);
+        doc.text(`Net Fark: ${stats.totalDifference > 0 ? '+' : ''}${stats.totalDifference}`, 170, summaryY);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`İlerleme: %${stats.progress}`, 20, 63);
+
+        // Table
+        const tableData = items.filter(i => i.status !== 'PENDING').map(item => [
+            item.materialReference,
+            item.company || '-',
+            item.location || '-',
+            item.systemStock.toString(),
+            item.countedStock.toString(),
+            item.difference !== undefined ? (item.difference > 0 ? '+' : '') + item.difference : '0',
+            item.status === 'MATCH' ? 'Eşleşti' : 'Fark Var'
+        ]);
+
+        autoTable(doc, {
+            head: [['Malzeme Ref', 'Firma', 'Konum', 'Sistem', 'Sayım', 'Fark', 'Durum']],
+            body: tableData,
+            startY: 75,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            columnStyles: {
+                0: { cellWidth: 35 },
+                3: { halign: 'right' },
+                4: { halign: 'right' },
+                5: { halign: 'center' },
+                6: { cellWidth: 22 }
+            },
+            didParseCell: (data) => {
+                if (data.column.index === 6 && data.section === 'body') {
+                    if (data.cell.raw === 'Eşleşti') {
+                        data.cell.styles.textColor = [34, 197, 94];
+                    } else {
+                        data.cell.styles.textColor = [239, 68, 68];
+                    }
+                }
+                if (data.column.index === 5 && data.section === 'body') {
+                    const val = data.cell.raw as string;
+                    if (val.startsWith('+')) {
+                        data.cell.styles.textColor = [34, 197, 94];
+                    } else if (val.startsWith('-')) {
+                        data.cell.styles.textColor = [239, 68, 68];
+                    }
+                }
+            }
+        });
+
+        // Footer
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Sayfa ${i} / ${pageCount} - Project Track Base`,
+                pageWidth / 2,
+                doc.internal.pageSize.getHeight() - 10,
+                { align: 'center' }
+            );
+        }
+
+        doc.save(`stok_sayim_raporu_${countDate}.pdf`);
+        showToast('PDF raporu indirildi', 'success');
     };
 
     // Reset all counts
@@ -313,11 +414,11 @@ export default function StockCountPage() {
                                     key={status}
                                     onClick={() => setStatusFilter(status)}
                                     className={`px-3 py-2 text-xs font-medium transition-colors ${statusFilter === status
-                                            ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
-                                                : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
-                                                    : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
-                                                        : 'bg-blue-500/20 text-blue-600'
-                                            : 'hover:bg-muted'
+                                        ? status === 'MATCH' ? 'bg-emerald-500/20 text-emerald-600'
+                                            : status === 'MISMATCH' ? 'bg-red-500/20 text-red-600'
+                                                : status === 'PENDING' ? 'bg-amber-500/20 text-amber-600'
+                                                    : 'bg-blue-500/20 text-blue-600'
+                                        : 'hover:bg-muted'
                                         }`}
                                 >
                                     {status === 'ALL' ? 'Tümü' : status === 'PENDING' ? 'Bekleyen' : status === 'MATCH' ? 'Eşleşen' : 'Farklı'}
@@ -333,6 +434,16 @@ export default function StockCountPage() {
                         >
                             <FileSpreadsheet className="h-4 w-4" />
                             <span className="hidden sm:inline">CSV</span>
+                        </button>
+
+                        <button
+                            onClick={exportToPDF}
+                            disabled={stats.pending === stats.total}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 text-sm hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                            title="PDF olarak dışa aktar"
+                        >
+                            <FileIcon className="h-4 w-4" />
+                            <span className="hidden sm:inline">PDF</span>
                         </button>
 
                         <button
@@ -412,7 +523,7 @@ export default function StockCountPage() {
                                     <tr
                                         key={item.id}
                                         className={`hover:bg-muted/50 transition-colors ${item.status === 'MISMATCH' ? 'bg-red-500/5' :
-                                                item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
+                                            item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
                                             }`}
                                     >
                                         <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
@@ -426,8 +537,8 @@ export default function StockCountPage() {
                                                 value={item.countedStock}
                                                 onChange={(e) => handleCountChange(item.id, e.target.value)}
                                                 className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono ${item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
-                                                        item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
-                                                            'border-input bg-background'
+                                                    item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
+                                                        'border-input bg-background'
                                                     }`}
                                                 placeholder="0"
                                             />
