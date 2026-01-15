@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         const mergedMap = new Map();
 
         // Add existing definitions
-        materials.forEach(m => mergedMap.set(m.reference, m));
+        materials.forEach((m: any) => mergedMap.set(m.reference, m));
 
         // Add potential missing ones (default limit 20)
         inventoryRefs.forEach(item => {
@@ -48,7 +48,11 @@ export async function GET(req: Request) {
                     id: null, // Indicates not saved yet
                     reference: item.materialReference,
                     minStock: 20,
-                    description: ''
+                    description: '',
+                    abcClass: null,
+                    supplier: null,
+                    defaultLocation: null,
+                    unit: 'Adet'
                 });
             }
         });
@@ -70,7 +74,7 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { reference, minStock, description } = body;
+        const { reference, minStock, description, abcClass, supplier, defaultLocation, unit } = body;
 
         if (!reference || typeof minStock !== 'number') {
             return errorResponse("Referans ve Kritik Stok değeri gereklidir", 400);
@@ -84,8 +88,8 @@ export async function POST(req: Request) {
         // Upsert: Update if exists, Create if not
         const material = await prisma.material.upsert({
             where: { reference },
-            update: { minStock, description },
-            create: { reference, minStock, description }
+            update: { minStock, description, abcClass, supplier, defaultLocation, unit },
+            create: { reference, minStock, description, abcClass, supplier, defaultLocation, unit }
         });
 
         return successResponse(material, "Malzeme tanımı güncellendi");

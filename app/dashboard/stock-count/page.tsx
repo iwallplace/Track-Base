@@ -24,6 +24,13 @@ interface StockCountItem {
     status: 'PENDING' | 'MATCH' | 'MISMATCH';
     difference?: number;
     saved?: boolean; // UI state for save status
+    material?: {
+        abcClass: string | null;
+        minStock: number | null;
+        unit: string;
+        defaultLocation: string | null;
+        description: string | null;
+    } | null;
 }
 
 type FilterStatus = 'ALL' | 'PENDING' | 'MATCH' | 'MISMATCH';
@@ -132,7 +139,8 @@ export default function StockCountPage() {
                             countedStock: entry.countedStock,
                             status: entry.status as any,
                             difference: entry.difference,
-                            saved: true
+                            saved: true,
+                            material: item.material // Passthrough material data
                         };
                     } else {
                         return {
@@ -142,7 +150,8 @@ export default function StockCountPage() {
                             location: item.location,
                             systemStock: item.stockCount || 0,
                             countedStock: '',
-                            status: 'PENDING'
+                            status: 'PENDING',
+                            material: item.material
                         };
                     }
                 });
@@ -411,8 +420,8 @@ export default function StockCountPage() {
                         <button
                             onClick={() => setBlindMode(!blindMode)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${blindMode
-                                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
-                                    : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                                ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                                : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
                                 }`}
                             title="Sistem stoğunu gizle (Kör Sayım)"
                         >
@@ -781,10 +790,52 @@ export default function StockCountPage() {
                                                             !blindMode && item.status === 'MATCH' ? 'bg-emerald-500/5' : ''
                                                             }`}
                                                     >
-                                                        <td className="px-6 py-4 font-medium font-mono">{item.materialReference}</td>
+                                                        <td className="px-6 py-4 font-medium">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-mono flex items-center gap-2">
+                                                                    {item.materialReference}
+                                                                    {item.material?.abcClass && (
+                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${item.material.abcClass === 'A' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                                                item.material.abcClass === 'B' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                                                    'bg-slate-100 text-slate-700 border-slate-200'
+                                                                            }`}>
+                                                                            {item.material.abcClass}
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                                {item.material?.description && (
+                                                                    <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={item.material.description}>
+                                                                        {item.material.description}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
                                                         <td className="px-6 py-4 text-muted-foreground">{item.company || '-'}</td>
-                                                        <td className="px-6 py-4 text-muted-foreground">{item.location || '-'}</td>
-                                                        {!blindMode && <td className="px-6 py-4 text-right font-mono text-lg font-bold">{item.systemStock}</td>}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span>{item.location || '-'}</span>
+                                                                {item.material?.defaultLocation && item.material.defaultLocation !== item.location && (
+                                                                    <span className="text-xs text-amber-600/80" title="Varsayılan Konum">
+                                                                        (Var: {item.material.defaultLocation})
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        {!blindMode && (
+                                                            <td className="px-6 py-4 text-right">
+                                                                <div className="flex items-center justify-end gap-2">
+                                                                    {item.material?.minStock && item.systemStock <= item.material.minStock && (
+                                                                        <div className="group relative" title={`Kritik Stok! (Min: ${item.material.minStock})`}>
+                                                                            <AlertTriangle className="h-4 w-4 text-red-500 animate-pulse" />
+                                                                        </div>
+                                                                    )}
+                                                                    <span className="font-mono text-lg font-bold">{item.systemStock}</span>
+                                                                    {item.material?.unit && (
+                                                                        <span className="text-xs text-muted-foreground self-end mb-1">{item.material.unit}</span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        )}
                                                         <td className="px-6 py-4">
                                                             <div className="relative">
                                                                 <input

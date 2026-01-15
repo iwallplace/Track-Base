@@ -54,8 +54,10 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // New: Show Deleted Toggle
+    // New Filters
     const showDeleted = searchParams.get('showDeleted') === 'true';
+    const abcClass = searchParams.get('abcClass'); // 'A', 'B', 'C'
+    const stockStatus = searchParams.get('stockStatus'); // 'CRITICAL', 'NORMAL'
 
     try {
         const baseWhere: any = {};
@@ -105,42 +107,80 @@ export async function GET(req: Request) {
             baseWhere.date = { gte: startOfWeek, lte: endOfWeek };
         }
 
-        if (view === 'summary' && !showDeleted) {
-            // 1. Separate Status from baseWhere for initial fetch
-            // Status affects which MATERIALS we show, so we must potentially filter materials by status of their latest item.
-            // HOWEVER, filtering distinct list by "latest item status" in SQL is complex (Window Functions).
-            // STRATEGY: 
-            // - If status is filtered: We fetch distinct materials, but we might over-fetch and filter in memory for that page (better than fetching ALL).
-            // - OR: We accept that "Status Filter" might be slightly expensive but scoped to pagination if possible.
+        // --- PRE-FILTERING BY MATERIAL METADATA (ABC / STOCK STATUS) ---
+        // If ABC or Stock Status is requested, we MUST filter by materialReference first.
+        // For Stock Status, we need MinStock even if we calculate balance later.
+        let allowedMaterials: Set<string> | null = null;
+        let materialMinStocks: Map<string, number> = new Map();
 
+        if (abcClass || stockStatus) {
+            const materialWhere: any = {};
+            if (abcClass) materialWhere.abcClass = abcClass;
+
+            // For stock status, we just need to fetch materials to know their MinStock
+            // We can't filter by "Critical" here because that depends on Balance vs MinStock.
+
+            const materials = await prisma.material.findMany({
+                where: materialWhere,
+                select: { reference: true, minStock: true }
+            });
+
+            allowedMaterials = new Set(materials.map(m => m.reference));
+            materials.forEach(m => materialMinStocks.set(m.reference, m.minStock));
+
+            // Apply to baseWhere immediately to reduce DB load
+            if (baseWhere.materialReference) {
+                // If search already filtered references, intersect it?
+                // Actually search is "contains", this is "in". Prisma handles AND correctly.
+                baseWhere.materialReference = {
+                    ...baseWhere.materialReference, // keep generic search
+                    in: Array.from(allowedMaterials)
+                };
+            } else {
+                baseWhere.materialReference = { in: Array.from(allowedMaterials) };
+            }
+        }
+
+        if (view === 'summary' && !showDeleted) {
             // Simplified Scalable Approach:
             // 1. Get Distinct Material References (Paginated) based on Search/Date
-            // Note: DB-side distinct pagination is efficient.
 
             const queryWhere = { ...baseWhere };
-            delete queryWhere.lastAction; // We need to calculate balance regardless of last action, but search/date applies.
+            delete queryWhere.lastAction; // Calculate balance regardless of last action
 
-            // 2. Count Total Distinct Materials (for Pagination UI)
-            // Efficient: Fetch only the distinct values to count them. 
-            // Ideally: groupBy return length.
+            // 2. Count Total Distinct Materials
             const distinctCount = await prisma.inventoryItem.groupBy({
                 by: ['materialReference'],
                 where: queryWhere,
-                _count: { materialReference: true } // just for aggregation if needed, but array length is what matters
+                _count: { materialReference: true }
             });
             const total = distinctCount.length;
 
             // 3. Fetch PAGINATED Distinct Materials
+            // NOTE: If filtering by StockStatus (Critical), we CANNOT paginate here easily 
+            // because we don't know which ones are critical until we calculate balance.
+            // Trade-off: If stockStatus is active, we might fetch MORE, check balance, and then slice.
+            // For now, let's assume if stockStatus is Set, we might have to scan more or accept pagination imperfections.
+            // BETTER: If stockStatus is Set, we fetch ALL matches (up to a safe limit like 500), filter in memory, then paginate.
+
+            let fetchLimit = limit;
+            let fetchSkip = limit ? (page - 1) * limit : undefined;
+
+            if (stockStatus) {
+                fetchLimit = 500; // Hard limit for critical checks to avoid OOM
+                fetchSkip = undefined; // Fetch all candidates, then filter
+            }
+
             const distinctMaterials = await prisma.inventoryItem.findMany({
                 where: queryWhere,
                 select: { materialReference: true },
                 distinct: ['materialReference'],
                 orderBy: { materialReference: 'asc' },
-                skip: limit ? (page - 1) * limit : undefined,
-                take: limit
+                skip: fetchSkip,
+                take: fetchLimit
             });
 
-            // 4. Process ONLY the visible items (Parallel Fetch)
+            // 4. Process candidates
             const processedResults = await Promise.all(distinctMaterials.map(async (mat) => {
                 const ref = mat.materialReference;
 
@@ -150,15 +190,14 @@ export async function GET(req: Request) {
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
-                if (!latestItem) return null; // Should not happen if reference exists
+                if (!latestItem) return null;
 
-                // B. Status Filter Check (Post-Fetch to keep SQL simple)
+                // B. Status Filter Check
                 if (status && latestItem.lastAction !== status) {
                     return null;
                 }
 
-                // C. Calculate Balance (Aggregate in DB)
-                // Use baseWhere.deletedAt to properly filter deleted/non-deleted items
+                // C. Calculate Balance
                 const deletedAtFilter = baseWhere.deletedAt;
                 const [entrySum, exitSum] = await Promise.all([
                     prisma.inventoryItem.aggregate({
@@ -171,10 +210,25 @@ export async function GET(req: Request) {
                     })
                 ]);
 
-                // Safe access to _sum with default 0
                 const entryCount = entrySum._sum?.stockCount ?? 0;
                 const exitCount = exitSum._sum?.stockCount ?? 0;
                 const balance = entryCount - exitCount;
+
+                // D. Stock Status Filter Check (CRITICAL)
+                if (stockStatus) {
+                    // We need minStock. Check map first, if missing fetch it (lazy load if not in pre-filter)
+                    let minStock = materialMinStocks.get(ref);
+                    if (minStock === undefined) {
+                        const m = await prisma.material.findUnique({ where: { reference: ref }, select: { minStock: true } });
+                        minStock = m?.minStock ?? 20; // Default 20 logic matches frontend?
+                    }
+
+                    if (stockStatus === 'CRITICAL') {
+                        if (balance > minStock) return null; // Not critical
+                    } else if (stockStatus === 'NORMAL') {
+                        if (balance <= minStock) return null; // Is critical
+                    }
+                }
 
                 return {
                     id: latestItem.id,
@@ -182,7 +236,7 @@ export async function GET(req: Request) {
                     company: latestItem.company || '',
                     waybillNo: latestItem.waybillNo,
                     date: latestItem.date,
-                    stockCount: balance, // Global stock
+                    stockCount: balance,
                     lastAction: latestItem.lastAction,
                     year: latestItem.year,
                     month: latestItem.month,
@@ -192,12 +246,19 @@ export async function GET(req: Request) {
                 } as InventorySummary;
             }));
 
-            // Filter out nulls (Status mismatch)
-            const finalProcessed: InventorySummary[] = processedResults.filter((i): i is InventorySummary => i !== null);
+            // Filter out nulls
+            let finalProcessed = processedResults.filter((i): i is InventorySummary => i !== null);
 
-            // Note: If Status filter is active, we might return FEWER than 'limit' items per page.
-            // This is a known trade-off for staying scalable without complex SQL subqueries.
-            // The UI will handle having 45 items instead of 50 gracefully.
+            // Handle Manual Pagination for Stock Status Filter
+            let responseTotal = total;
+
+            if (stockStatus) {
+                responseTotal = finalProcessed.length;
+                if (limit) {
+                    const localSkip = (page - 1) * limit;
+                    finalProcessed = finalProcessed.slice(localSkip, localSkip + limit);
+                }
+            }
 
             // 5. Map Users
             const userIds = [...new Set(finalProcessed.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
@@ -215,14 +276,17 @@ export async function GET(req: Request) {
             return successResponse({
                 items: finalItems,
                 pagination: {
-                    total, // Total DISTINCT materials (approximate if filtered by status, but accurate for navigation)
+                    total: responseTotal,
                     page,
-                    limit: limit || total,
-                    totalPages: limit ? Math.ceil(total / limit) : 1
+                    limit: limit || responseTotal,
+                    totalPages: limit ? Math.ceil(responseTotal / limit) : 1
                 }
             });
         }
 
+        // Standard List View (Raw Data)
+        // Note: Filters work on raw view too, but Stock Status (Critical) is meaningless on raw rows (balance is calculated).
+        // If stockStatus is requested on raw view, we might ignore it
         // Standard List View (Raw Data)
         const [inventory, total] = await prisma.$transaction([
             prisma.inventoryItem.findMany({
@@ -235,17 +299,36 @@ export async function GET(req: Request) {
         ]);
 
         const userIds = [...new Set(inventory.map(i => i.lastModifiedBy).filter(Boolean) as string[])];
-        const users = await prisma.user.findMany({
-            where: { id: { in: userIds } },
-            select: { id: true, name: true }
-        });
+        const materialRefs = [...new Set(inventory.map(i => i.materialReference))];
+
+        const [users, materials] = await Promise.all([
+            prisma.user.findMany({
+                where: { id: { in: userIds } },
+                select: { id: true, name: true }
+            }),
+            prisma.material.findMany({
+                where: { reference: { in: materialRefs } },
+                select: { reference: true, abcClass: true, minStock: true, unit: true, defaultLocation: true, description: true }
+            })
+        ]);
 
         const userMap = new Map(users.map(u => [u.id, u.name]));
+        const materialMap = new Map(materials.map(m => [m.reference, m]));
 
-        const enrichedInventory = inventory.map(item => ({
-            ...item,
-            modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem'
-        }));
+        const enrichedInventory = inventory.map(item => {
+            const material = materialMap.get(item.materialReference);
+            return {
+                ...item,
+                modifierName: item.lastModifiedBy ? userMap.get(item.lastModifiedBy) || 'Bilinmeyen' : 'Sistem',
+                material: material ? {
+                    abcClass: material.abcClass,
+                    minStock: material.minStock,
+                    unit: material.unit,
+                    defaultLocation: material.defaultLocation,
+                    description: material.description
+                } : null
+            };
+        });
 
         return successResponse({
             items: enrichedInventory,

@@ -125,6 +125,11 @@ model Material {
   reference      String   @unique // Material Reference Code
   minStock       Int      @default(20) // Critical Stock Limit
   description    String?
+  // Industrial Standard Fields
+  abcClass       String?  // 'A', 'B', 'C'
+  supplier       String?
+  defaultLocation String?
+  unit           String   @default("Adet")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
