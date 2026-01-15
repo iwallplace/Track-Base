@@ -307,10 +307,10 @@ export default function DashboardPage() {
                     <h2 className="text-2xl font-bold text-foreground">{t('inventory_title')}</h2>
                     <p className="text-muted-foreground">{t('inventory_desc')}</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap md:flex-nowrap">
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                        className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors flex-1 md:flex-none justify-center"
                     >
                         <Download className="h-4 w-4" />
                         {t('export')}
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                             setModalInitialData(null);
                             setIsModalOpen(true);
                         }}
-                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors flex-1 md:flex-none justify-center"
                     >
                         <Plus className="h-4 w-4" />
                         {t('add_entry')}
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                             setModalInitialData(null);
                             setIsModalOpen(true);
                         }}
-                        className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+                        className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors flex-1 md:flex-none justify-center"
                     >
                         <Plus className="h-4 w-4" />
                         {t('add_exit')}
@@ -341,7 +341,7 @@ export default function DashboardPage() {
                     {(session?.user?.role === 'ADMIN' || session?.user?.role === 'IME') && (
                         <button
                             onClick={() => setIsSettingsModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                            className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors shrink-0"
                             title="Malzeme Limitleri ve Standartları"
                         >
                             <Settings className="h-4 w-4" />
@@ -552,7 +552,7 @@ export default function DashboardPage() {
                                         onClick={() => router.push(`/dashboard/inventory/${item.materialReference}?highlight=${item.id}${showDeleted ? '&showDeleted=true' : ''}`)}
                                         className={`hover:bg-muted/50 transition-colors cursor-pointer group ${showDeleted ? 'opacity-75 bg-red-50/10 border-l-2 border-l-red-500' : ''} ${isLowStock ? 'bg-red-50/20' : ''}`}
                                     >
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="font-medium text-foreground">{item.year} / {item.month}</div>
                                             <div className="text-muted-foreground text-xs">{item.week}. {t('week')}</div>
                                         </td>
