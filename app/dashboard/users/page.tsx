@@ -333,7 +333,7 @@ export default function UsersPage() {
                                             <label className="text-xs text-muted-foreground block mb-1">Rol Kodu (Benzersiz)</label>
                                             <input
                                                 required
-                                                placeholder="Örn: DRIVER"
+                                                placeholder="Örn: VARDIYA_AMIRI"
                                                 value={newRole.name}
                                                 onChange={e => setNewRole({ ...newRole, name: e.target.value.toUpperCase() })}
                                                 className="w-full px-3 py-2 rounded border border-input text-sm"
@@ -343,7 +343,7 @@ export default function UsersPage() {
                                             <label className="text-xs text-muted-foreground block mb-1">Rol Etiketi (Görünecek Ad)</label>
                                             <input
                                                 required
-                                                placeholder="Örn: Şoför"
+                                                placeholder="Örn: Vardiya Amiri"
                                                 value={newRole.label}
                                                 onChange={e => setNewRole({ ...newRole, label: e.target.value })}
                                                 className="w-full px-3 py-2 rounded border border-input text-sm"
