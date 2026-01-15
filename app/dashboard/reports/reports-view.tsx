@@ -6,7 +6,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
-import { Download, Mail, Bot, FileSpreadsheet, AlertTriangle, Package, Server, Database, Cpu, Activity } from 'lucide-react';
+import { Download, Mail, Bot, FileSpreadsheet, AlertTriangle, Package, Server, Database, Cpu, Activity, X, Search } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
@@ -23,6 +23,8 @@ interface ReportsViewProps {
         deadStockCount: number;
         lowStockCount: number;
         lowStockItems: { id: string; materialReference: string; company: string; stockCount: number }[];
+        allLowStockItems?: { id: string; materialReference: string; company: string; stockCount: number }[];
+        deadStockItems?: { id: string; materialReference: string; company: string; stockCount: number; lastActivity: Date }[];
         topMaterials: { reference: string; transactionCount: number; totalStock: number }[];
         systemMetrics?: {
             dbSize: string;
@@ -42,6 +44,8 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
     const { showToast } = useToast();
     const { t } = useLanguage();
     const reportRef = useRef<HTMLDivElement>(null);
+
+    const [selectedMetric, setSelectedMetric] = useState<'lowStock' | 'deadStock' | null>(null);
 
     const [summary, setSummary] = useState<string | null>(null);
     const [generatingSummary, setGeneratingSummary] = useState(false);
@@ -216,14 +220,26 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                         <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">%{data.turnoverRate}</div>
                         <div className="text-xs text-emerald-600/70 dark:text-emerald-500/70 mt-1">{t('sales_conversion')}</div>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+                    <div
+                        onClick={() => setSelectedMetric('deadStock')}
+                        className={`rounded-xl border border-border bg-card p-4 text-center shadow-sm cursor-pointer hover:bg-accent/50 transition-colors relative group`}
+                    >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Search className="h-4 w-4 text-muted-foreground" />
+                        </div>
                         <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('dead_stock')}</div>
                         <div className={`text-2xl font-bold mt-1 ${data.deadStockCount > 0 ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
                             {data.deadStockCount}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{t('stock_items')}</div>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
+                    <div
+                        onClick={() => setSelectedMetric('lowStock')}
+                        className={`rounded-xl border border-border bg-card p-4 text-center shadow-sm cursor-pointer hover:bg-accent/50 transition-colors relative group`}
+                    >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Search className="h-4 w-4 text-muted-foreground" />
+                        </div>
                         <div className="text-xs uppercase text-muted-foreground font-bold tracking-wider">{t('critical_level')}</div>
                         <div className={`text-2xl font-bold mt-1 ${data.lowStockCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground'}`}>
                             {data.lowStockCount}
@@ -231,6 +247,80 @@ export default function ReportsView({ data, period }: ReportsViewProps) {
                         <div className="text-xs text-muted-foreground mt-1">{t('low_stock_label')}</div>
                     </div>
                 </div>
+
+                {/* Detail Modal */}
+                {selectedMetric && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="w-full max-w-2xl bg-card rounded-xl shadow-xl border border-border flex flex-col max-h-[80vh]">
+                            <div className="flex items-center justify-between p-4 border-b border-border">
+                                <h3 className="text-lg font-bold flex items-center gap-2">
+                                    {selectedMetric === 'lowStock' ? (
+                                        <>
+                                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                            <span className="text-amber-500">Kritik Stok Listesi</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Package className="h-5 w-5 text-red-500" />
+                                            <span className="text-red-500">Ölü Stok Listesi (90+ Gün)</span>
+                                        </>
+                                    )}
+                                </h3>
+                                <button
+                                    onClick={() => setSelectedMetric(null)}
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-y-auto flex-1">
+                                {selectedMetric === 'lowStock' ? (
+                                    <div className="space-y-2">
+                                        {(data.allLowStockItems || data.lowStockItems || []).map((item) => (
+                                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 transition-colors">
+                                                <div>
+                                                    <div className="font-medium text-foreground">{item.materialReference}</div>
+                                                    <div className="text-xs text-muted-foreground">{item.company}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-amber-600 dark:text-amber-400">{item.stockCount}</div>
+                                                    <div className="text-xs text-amber-600/70">Adet</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(data.allLowStockItems || data.lowStockItems || []).length === 0 && (
+                                            <div className="text-center py-8 text-muted-foreground">Liste boş</div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {(data.deadStockItems || []).map((item) => (
+                                            <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 transition-colors">
+                                                <div>
+                                                    <div className="font-medium text-foreground">{item.materialReference}</div>
+                                                    <div className="text-xs text-muted-foreground">{item.company}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-red-600 dark:text-red-400">{item.stockCount}</div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Son: {new Date(item.lastActivity).toLocaleDateString('tr-TR')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(data.deadStockItems || []).length === 0 && (
+                                            <div className="text-center py-8 text-muted-foreground">Liste boş</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-border bg-muted/20 text-xs text-center text-muted-foreground">
+                                Toplam {selectedMetric === 'lowStock' ? (data.allLowStockItems?.length || 0) : (data.deadStockItems?.length || 0)} kayıt
+                            </div>
+                        </div>
+                    </div>
+                )}
+
 
                 {/* Charts Area - Status & Monthly Activity */}
                 <div className="grid gap-6 md:grid-cols-2 mb-6">

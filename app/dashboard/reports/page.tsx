@@ -167,6 +167,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         let lowStockCount = 0;
         let deadStockCount = 0;
         const lowStockList: any[] = [];
+        const deadStockList: any[] = [];
+
 
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -190,6 +192,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
             if (safeBalance > 0 && data.lastActivity < ninetyDaysAgo) {
                 deadStockCount++;
+                deadStockList.push({
+                    id: ref,
+                    materialReference: ref,
+                    company: data.company,
+                    stockCount: safeBalance,
+                    lastActivity: data.lastActivity
+                });
             }
         });
 
@@ -313,7 +322,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             turnoverRate, // Real turnover based on 'Çıkış'
             deadStockCount, // Real dead stock (>90 days inactivity)
             lowStockCount, // Real critical stock (<20 balance)
-            lowStockItems: lowStockList.slice(0, 5), // Top 5 critical items
+            lowStockItems: lowStockList.slice(0, 5), // Top 5 critical items (for preview list)
+            allLowStockItems: lowStockList, // Full list for Modal
+            deadStockItems: deadStockList, // Full list for Modal
             topMaterials,
             systemMetrics
         };
