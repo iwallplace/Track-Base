@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>İrsaliye No: IRS-2026-002</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 40px;
+            background: white;
+            color: #1f2937;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 3px solid #059669;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .doc-info {
+            text-align: right;
+        }
+
+        .doc-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .doc-no {
+            font-size: 14px;
+            color: #059669;
+            font-weight: bold;
+        }
+
+        .doc-date {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .parties {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .party {
+            flex: 1;
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .party-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .party-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .party-detail {
+            font-size: 12px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th {
+            background: #059669;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .qty {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background: #ecfdf5;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #065f46;
+        }
+
+        .footer {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            width: 200px;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 1px solid #9ca3af;
+            margin-top: 60px;
+            padding-top: 8px;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-urgent {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div>
+            <div class="logo">İNCİ AKÜ SANAYİ A.Ş.</div>
+            <div class="logo-sub">Kalite Kontrol Departmanı</div>
+        </div>
+        <div class="doc-info">
+            <div class="doc-title">KALİTE KONTROL İRSALİYESİ</div>
+            <div class="doc-no">IRS-2026-002</div>
+            <div class="doc-date">15 Ocak 2026</div>
+            <div style="margin-top: 8px;"><span class="badge badge-urgent">ACİL</span></div>
+        </div>
+    </div>
+
+    <div class="parties">
+        <div class="party">
+            <div class="party-title">Kaynak</div>
+            <div class="party-name">Üretim Hattı A3</div>
+            <div class="party-detail">
+                Ana Fabrika, Blok A<br>
+                Kalite Onay Bekleniyor
+            </div>
+        </div>
+        <div class="party">
+            <div class="party-title">Hedef</div>
+            <div class="party-name">Kalite Kontrol Laboratuvarı</div>
+            <div class="party-detail">
+                Test Binası, Kat 2<br>
+                Sorumlu: Mehmet Demir
+            </div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 80px;">Sıra</th>
+                <th>Malzeme Referansı</th>
+                <th>Açıklama</th>
+                <th style="width: 100px;" class="qty">Numune</th>
+                <th style="width: 120px;">Test Türü</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><strong>ELK-PLATE-PB</strong></td>
+                <td>Kurşun Plaka (Elektrot)</td>
+                <td class="qty">10</td>
+                <td>Kimyasal</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><strong>SEP-GLASS-MAT</strong></td>
+                <td>Cam Elyaf Seperatör</td>
+                <td class="qty">5</td>
+                <td>Fiziksel</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><strong>ACID-H2SO4-37</strong></td>
+                <td>Sülfürik Asit %37</td>
+                <td class="qty">3</td>
+                <td>Yoğunluk</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="3" style="text-align: right;">TOPLAM NUMUNE:</td>
+                <td class="qty">18</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div class="signature">
+            <div class="signature-line">Gönderen (Üretim)</div>
+        </div>
+        <div class="signature">
+            <div class="signature-line">Alan (Kalite)</div>
+        </div>
+    </div>
+</body>
+
+</html>

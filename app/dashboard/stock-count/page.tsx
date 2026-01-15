@@ -153,6 +153,37 @@ export default function StockCountPage() {
         }
     };
 
+    const endSession = async () => {
+        if (!sessionId) return;
+
+        if (!confirm('Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/stock-count/session', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, action: 'complete' })
+            });
+
+            if (res.ok) {
+                showToast('Sayım tamamlandı', 'success');
+                setTodaySessionData((prev: any) => ({ ...prev, status: 'COMPLETED' }));
+                setActiveTab('history');
+                loadHistory();
+            } else {
+                showToast('Sayım tamamlanamadı', 'error');
+            }
+        } catch (error) {
+            console.error("End session error:", error);
+            showToast('Bir hata oluştu', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const loadInventoryWithSession = async (existingEntries: any[]) => {
         try {
             const res = await fetch('/api/inventory?limit=500&view=summary');
@@ -535,19 +566,55 @@ export default function StockCountPage() {
                                     </button>
                                 )}
                                 {todayStatus === 'EXISTS' && (
-                                    <button
-                                        onClick={() => {
-                                            setCountDate(format(new Date(), 'yyyy-MM-dd'));
-                                            setActiveTab('active');
-                                        }}
-                                        className="flex items-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
-                                    >
-                                        <div className="relative">
-                                            <RotateCcw className="h-5 w-5" />
-                                            {todaySessionData?.status !== 'COMPLETED' && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
-                                        </div>
-                                        {todaySessionData?.status === 'COMPLETED' ? 'Sonuçları Görüntüle' : 'Sayımı Sürdür'}
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setCountDate(format(new Date(), 'yyyy-MM-dd'));
+                                                setActiveTab('active');
+                                            }}
+                                            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+                                        >
+                                            <div className="relative">
+                                                <RotateCcw className="h-5 w-5" />
+                                                {todaySessionData?.status !== 'COMPLETED' && <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
+                                            </div>
+                                            {todaySessionData?.status === 'COMPLETED' ? 'Sonuçları Görüntüle' : 'Sayımı Sürdür'}
+                                        </button>
+                                        {todaySessionData?.status !== 'COMPLETED' && (
+                                            <button
+                                                onClick={() => {
+                                                    // First load the session to get sessionId
+                                                    const today = format(new Date(), 'yyyy-MM-dd');
+                                                    fetch(`/api/stock-count/session?date=${today}`)
+                                                        .then(res => res.json())
+                                                        .then(data => {
+                                                            if (data?.id) {
+                                                                setSessionId(data.id);
+                                                                // Then call endSession
+                                                                if (confirm('Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                                                                    fetch('/api/stock-count/session', {
+                                                                        method: 'PATCH',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({ sessionId: data.id, action: 'complete' })
+                                                                    }).then(res => {
+                                                                        if (res.ok) {
+                                                                            showToast('Sayım tamamlandı', 'success');
+                                                                            setTodaySessionData((prev: any) => ({ ...prev, status: 'COMPLETED' }));
+                                                                            loadHistory();
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }
+                                                        });
+                                                }}
+                                                disabled={loading}
+                                                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20 disabled:opacity-50"
+                                            >
+                                                <CheckCircle className="h-5 w-5" />
+                                                Sayımı Bitir
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

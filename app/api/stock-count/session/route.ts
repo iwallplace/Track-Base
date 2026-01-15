@@ -99,3 +99,40 @@ export async function GET(req: Request) {
         return new NextResponse("Internal Server Error", { status: 500 });
     }
 }
+
+// Complete a session
+export async function PATCH(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return new NextResponse("Unauthorized", { status: 401 });
+        }
+
+        // RBAC: stock-count.manage izin kontrolü
+        const canManage = await hasPermission(session.user.role || 'USER', 'stock-count.manage');
+        if (!canManage) {
+            return new NextResponse("Forbidden", { status: 403 });
+        }
+
+        const body = await req.json();
+        const { sessionId, action } = body;
+
+        if (!sessionId) {
+            return new NextResponse("Session ID gerekli", { status: 400 });
+        }
+
+        if (action === 'complete') {
+            const updated = await prisma.stockCountSession.update({
+                where: { id: sessionId },
+                data: { status: 'COMPLETED' }
+            });
+            return NextResponse.json(updated);
+        }
+
+        return new NextResponse("Geçersiz işlem", { status: 400 });
+
+    } catch (error) {
+        console.error("Stock Session PATCH Error:", error);
+        return new NextResponse("Internal Server Error", { status: 500 });
+    }
+}

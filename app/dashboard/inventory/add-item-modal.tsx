@@ -20,6 +20,8 @@ interface AddItemModalProps {
 export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initialData }: AddItemModalProps) {
     const { showToast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [pdfUploading, setPdfUploading] = useState(false);
+    const [pdfError, setPdfError] = useState<string | null>(null);
     const [formData, setFormData] = useState<{
         company: string;
         waybillNo: string;
@@ -261,23 +263,49 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                             <div className="flex gap-4 items-center">
                                 <input
                                     type="file"
-                                    accept=".pdf"
+                                    accept="application/pdf,.pdf"
+                                    disabled={pdfUploading}
                                     onChange={async (e) => {
                                         const file = e.target.files?.[0];
-                                        if (file) {
+                                        if (!file) return;
+
+                                        // Strict PDF validation
+                                        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                                            showToast("Sadece PDF dosyaları yüklenebilir", 'error');
+                                            setPdfError("Sadece PDF dosyaları yüklenebilir");
+                                            e.target.value = '';
+                                            return;
+                                        }
+
+                                        // File size check (10MB max)
+                                        if (file.size > 10 * 1024 * 1024) {
+                                            showToast("Dosya boyutu 10MB'dan küçük olmalı", 'error');
+                                            setPdfError("Dosya boyutu çok büyük");
+                                            e.target.value = '';
+                                            return;
+                                        }
+
+                                        setPdfUploading(true);
+                                        setPdfError(null);
+
+                                        try {
                                             const { uploadWaybill } = await import('@/lib/supabase');
-                                            try {
-                                                const path = await uploadWaybill(file, formData.waybillNo || 'temp');
-                                                if (path) {
-                                                    setFormData({ ...formData, waybillUrl: path });
-                                                    showToast("PDF başarıyla yüklendi", 'success');
-                                                } else {
-                                                    showToast("PDF yüklenemedi", 'error');
-                                                }
-                                            } catch (error) {
-                                                console.error(error);
-                                                showToast("Yükleme hatası", 'error');
+                                            const path = await uploadWaybill(file, formData.waybillNo || 'temp');
+                                            if (path) {
+                                                setFormData({ ...formData, waybillUrl: path });
+                                                showToast("PDF başarıyla yüklendi", 'success');
+                                            } else {
+                                                setPdfError("PDF yüklenemedi");
+                                                showToast("PDF yüklenemedi", 'error');
+                                                e.target.value = '';
                                             }
+                                        } catch (error) {
+                                            console.error(error);
+                                            setPdfError("Yükleme hatası");
+                                            showToast("Yükleme hatası", 'error');
+                                            e.target.value = '';
+                                        } finally {
+                                            setPdfUploading(false);
                                         }
                                     }}
                                     className="block w-full text-sm text-slate-500
@@ -285,11 +313,14 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                                 file:rounded-full file:border-0
                                 file:text-sm file:font-semibold
                                 file:bg-violet-50 file:text-violet-700
-                                hover:file:bg-violet-100"
+                                hover:file:bg-violet-100
+                                disabled:opacity-50"
                                 />
-                                {formData.waybillUrl && (
-                                    <a href={formData.waybillUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline">Görüntüle</a>
+                                {pdfUploading && <span className="text-xs text-muted-foreground">Yükleniyor...</span>}
+                                {formData.waybillUrl && !pdfUploading && (
+                                    <span className="text-xs text-emerald-600 font-medium">✓ Yüklendi</span>
                                 )}
+                                {pdfError && <span className="text-xs text-red-500">{pdfError}</span>}
                             </div>
                         </div>
                     )}

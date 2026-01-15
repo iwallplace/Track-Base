@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>İrsaliye No: IRS-2026-001</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; background: white; color: #1f2937; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; color: #2563eb; }
+        .logo-sub { font-size: 12px; color: #6b7280; }
+        .doc-info { text-align: right; }
+        .doc-title { font-size: 20px; font-weight: bold; color: #111827; }
+        .doc-no { font-size: 14px; color: #2563eb; font-weight: bold; }
+        .doc-date { font-size: 12px; color: #6b7280; }
+        .parties { display: flex; gap: 40px; margin-bottom: 30px; }
+        .party { flex: 1; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .party-title { font-size: 10px; text-transform: uppercase; color: #6b7280; font-weight: bold; margin-bottom: 8px; }
+        .party-name { font-size: 16px; font-weight: bold; color: #111827; margin-bottom: 4px; }
+        .party-detail { font-size: 12px; color: #4b5563; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        tr:hover { background: #f9fafb; }
+        .qty { text-align: center; font-weight: bold; }
+        .total-row { background: #f0f9ff; }
+        .total-row td { font-weight: bold; color: #1d4ed8; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; }
+        .signature { width: 200px; text-align: center; }
+        .signature-line { border-top: 1px solid #9ca3af; margin-top: 60px; padding-top: 8px; font-size: 11px; color: #6b7280; }
+        .notes { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin-top: 20px; font-size: 12px; }
+        .notes-title { font-weight: bold; color: #92400e; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="logo">İNCİ AKÜ SANAYİ A.Ş.</div>
+            <div class="logo-sub">Organize Sanayi Bölgesi, Manisa</div>
+        </div>
+        <div class="doc-info">
+            <div class="doc-title">SEVKİYAT İRSALİYESİ</div>
+            <div class="doc-no">IRS-2026-001</div>
+            <div class="doc-date">15 Ocak 2026</div>
+        </div>
+    </div>
+
+    <div class="parties">
+        <div class="party">
+            <div class="party-title">Gönderen</div>
+            <div class="party-name">İnci Akü Ana Depo</div>
+            <div class="party-detail">
+                Organize Sanayi Bölgesi<br>
+                45030 Manisa, Türkiye<br>
+                Tel: +90 236 233 00 00
+            </div>
+        </div>
+        <div class="party">
+            <div class="party-title">Alıcı</div>
+            <div class="party-name">Ege Bölge Deposu</div>
+            <div class="party-detail">
+                Atatürk Sanayi Sitesi<br>
+                35100 İzmir, Türkiye<br>
+                Tel: +90 232 441 00 00
+            </div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 80px;">Sıra</th>
+                <th>Malzeme Referansı</th>
+                <th>Açıklama</th>
+                <th style="width: 100px;" class="qty">Miktar</th>
+                <th style="width: 80px;">Birim</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><strong>AKU-L3-72AH</strong></td>
+                <td>L3 Serisi 72Ah Akü</td>
+                <td class="qty">150</td>
+                <td>Adet</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><strong>AKU-L2-60AH</strong></td>
+                <td>L2 Serisi 60Ah Akü</td>
+                <td class="qty">200</td>
+                <td>Adet</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><strong>AKU-START-45</strong></td>
+                <td>Start-Stop 45Ah AGM</td>
+                <td class="qty">75</td>
+                <td>Adet</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><strong>TERM-COPPER-M8</strong></td>
+                <td>Bakır Terminal M8</td>
+                <td class="qty">500</td>
+                <td>Adet</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="3" style="text-align: right;">TOPLAM:</td>
+                <td class="qty">925</td>
+                <td>Adet</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="notes">
+        <div class="notes-title">⚠️ Önemli Notlar</div>
+        <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>Teslimatta ürün sayısı mutlaka kontrol edilmelidir.</li>
+            <li>Hasarlı ürünler derhal bildirilmelidir.</li>
+            <li>Depolama sıcaklığı: 5°C - 25°C</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <div class="signature">
+            <div class="signature-line">Teslim Eden</div>
+        </div>
+        <div class="signature">
+            <div class="signature-line">Teslim Alan</div>
+        </div>
+    </div>
+</body>
+</html>

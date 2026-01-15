@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>İrsaliye No: IRS-2026-003</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 40px;
+            background: white;
+            color: #1f2937;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 3px solid #7c3aed;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #7c3aed;
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .doc-info {
+            text-align: right;
+        }
+
+        .doc-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .doc-no {
+            font-size: 14px;
+            color: #7c3aed;
+            font-weight: bold;
+        }
+
+        .doc-date {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .parties {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .party {
+            flex: 1;
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .party-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .party-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .party-detail {
+            font-size: 12px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th {
+            background: #7c3aed;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .qty {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background: #f5f3ff;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #5b21b6;
+        }
+
+        .footer {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            width: 200px;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 1px solid #9ca3af;
+            margin-top: 60px;
+            padding-top: 8px;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-title {
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            font-size: 12px;
+        }
+
+        .info-item label {
+            color: #6b7280;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .info-item span {
+            font-weight: bold;
+            color: #111827;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div>
+            <div class="logo">İNCİ AKÜ SANAYİ A.Ş.</div>
+            <div class="logo-sub">Tedarik Zinciri Yönetimi</div>
+        </div>
+        <div class="doc-info">
+            <div class="doc-title">TEDARİKÇİ GİRİŞ İRSALİYESİ</div>
+            <div class="doc-no">IRS-2026-003</div>
+            <div class="doc-date">15 Ocak 2026</div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <div class="info-title">📦 Sevkiyat Bilgileri</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Sipariş No</label>
+                <span>PO-2026-0145</span>
+            </div>
+            <div class="info-item">
+                <label>Araç Plakası</label>
+                <span>45 ABC 123</span>
+            </div>
+            <div class="info-item">
+                <label>Şoför</label>
+                <span>Ali Yılmaz</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="parties">
+        <div class="party">
+            <div class="party-title">Tedarikçi</div>
+            <div class="party-name">Kurşun Metal A.Ş.</div>
+            <div class="party-detail">
+                Gebze Organize Sanayi Bölgesi<br>
+                41400 Kocaeli, Türkiye<br>
+                Vergi No: 1234567890
+            </div>
+        </div>
+        <div class="party">
+            <div class="party-title">Teslim Yeri</div>
+            <div class="party-name">İnci Akü Hammadde Deposu</div>
+            <div class="party-detail">
+                Ana Fabrika, Depo B<br>
+                45030 Manisa, Türkiye<br>
+                Kabul Sorumlusu: Ayşe Kaya
+            </div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 80px;">Sıra</th>
+                <th>Malzeme Kodu</th>
+                <th>Açıklama</th>
+                <th style="width: 100px;" class="qty">Miktar</th>
+                <th style="width: 80px;">Birim</th>
+                <th style="width: 100px;">Parti No</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><strong>RAW-LEAD-99</strong></td>
+                <td>Saf Kurşun %99.99</td>
+                <td class="qty">5000</td>
+                <td>Kg</td>
+                <td>L2026-001</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><strong>RAW-ANTIMONY</strong></td>
+                <td>Antimon Külçe</td>
+                <td class="qty">500</td>
+                <td>Kg</td>
+                <td>A2026-045</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><strong>RAW-TIN-PURE</strong></td>
+                <td>Saf Kalay</td>
+                <td class="qty">100</td>
+                <td>Kg</td>
+                <td>T2026-012</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="3" style="text-align: right;">TOPLAM AĞIRLIK:</td>
+                <td class="qty">5600</td>
+                <td>Kg</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div class="signature">
+            <div class="signature-line">Tedarikçi Temsilcisi</div>
+        </div>
+        <div class="signature">
+            <div class="signature-line">Depo Kabul Sorumlusu</div>
+        </div>
+        <div class="signature">
+            <div class="signature-line">Kalite Kontrol Onayı</div>
+        </div>
+    </div>
+</body>
+
+</html>
