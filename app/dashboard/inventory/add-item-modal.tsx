@@ -67,6 +67,18 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Block submission if PDF is still uploading
+        if (pdfUploading) {
+            showToast("PDF yüklemesi devam ediyor, lütfen bekleyin", 'error');
+            return;
+        }
+
+        // Block submission if PDF upload failed
+        if (pdfError) {
+            showToast("PDF yüklemesi başarısız oldu, lütfen tekrar deneyin veya PDF'siz devam edin", 'error');
+            return;
+        }
+
         // Manual validation for strictness
         // Note: Uppercase conversion and trim are handled by Backend Zod Schema now.
         // We send data as is, CSS handles visual uppercase.

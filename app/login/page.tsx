@@ -158,25 +158,7 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <input
-                                    id="remember-me"
-                                    name="remember-me"
-                                    type="checkbox"
-                                    checked={rememberMe}
-                                    onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="h-4 w-4 rounded border-input bg-background text-blue-600 focus:ring-blue-500 focus:ring-offset-background"
-                                />
-                                <label htmlFor="remember-me" className="ml-2 block text-sm text-muted-foreground">
-                                    Beni Hatırla
-                                </label>
-                            </div>
-
-                            <div className="text-sm">
-                                {/* Şifremi Unuttum link removed */}
-                            </div>
-                        </div>
+                        {/* Actions removed - simplified login */}
 
                         <button
                             type="submit"
