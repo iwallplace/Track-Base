@@ -23,6 +23,7 @@ model User {
   deletedAt        DateTime? // Soft Delete support
   auditLogs        AuditLog[]
   notifications    NotificationState[]
+  stockCountSessions StockCountSession[]
 }
 
 model InventoryItem {
@@ -140,3 +141,39 @@ model AISummaryCache {
   @@index([cacheKey])
   @@index([expiresAt]) // For cleanup of expired entries
 }
+
+// Stock Count Session - Represents a counting session for a specific date
+model StockCountSession {
+  id           String              @id @default(cuid())
+  sessionDate  DateTime            // The date this count is for
+  status       String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, CANCELLED
+  notes        String?             // Optional notes about the session
+  createdBy    User                @relation(fields: [createdById], references: [id])
+  createdById  String
+  createdAt    DateTime            @default(now())
+  completedAt  DateTime?           // When the session was marked complete
+  entries      StockCountEntry[]
+
+  @@unique([sessionDate, createdById]) // One session per user per date
+  @@index([sessionDate])
+  @@index([status])
+}
+
+// Stock Count Entry - Individual item count within a session
+model StockCountEntry {
+  id                String            @id @default(cuid())
+  session           StockCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId         String
+  materialReference String            // The material being counted
+  systemStock       Int               // System stock at time of count
+  countedStock      Int               // Actual counted amount
+  difference        Int               // countedStock - systemStock
+  status            String            @default("PENDING") // PENDING, MATCH, MISMATCH
+  note              String?           // Optional note for this entry
+  countedAt         DateTime          @default(now())
+
+  @@unique([sessionId, materialReference]) // One entry per material per session
+  @@index([sessionId])
+  @@index([materialReference])
+}
+

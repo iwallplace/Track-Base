@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Calendar, FileText, Trash2, Search, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Trash2, Search, AlertTriangle, ExternalLink, Eye, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-provider';
@@ -17,6 +17,7 @@ interface InventoryItem {
     date: string;
     company: string;
     waybillNo: string;
+    waybillUrl?: string;
     materialReference: string;
     stockCount: number;
     lastAction: string;
@@ -32,6 +33,7 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
     const [searchQuery, setSearchQuery] = useState('');
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, itemId: null as string | null });
     const [deleteMaterialModal, setDeleteMaterialModal] = useState(false);
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
     const { data: session } = useSession();
     const router = useRouter();
@@ -245,8 +247,18 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                                         <div className="font-medium text-foreground text-lg">
                                             {item.company}
                                         </div>
-                                        <div className="text-sm text-muted-foreground font-mono">
+                                        <div className="text-sm text-muted-foreground font-mono flex items-center gap-2">
                                             {t('col_waybill')}: <span className={item.id === highlightId ? 'font-bold text-foreground' : ''}>{item.waybillNo}</span>
+                                            {item.waybillUrl && (
+                                                <button
+                                                    onClick={() => setPdfPreviewUrl(item.waybillUrl!)}
+                                                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors text-xs"
+                                                    title="İrsaliye PDF'ini Görüntüle"
+                                                >
+                                                    <Eye className="h-3 w-3" />
+                                                    PDF
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -327,6 +339,44 @@ export default function MaterialHistoryPage({ params }: { params: Promise<{ mate
                             >
                                 Tümünü Sil
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PDF Preview Modal */}
+            {pdfPreviewUrl && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-4xl h-[80vh] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+                        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50">
+                            <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-blue-500" />
+                                İrsaliye Belgesi
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={pdfPreviewUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors text-sm"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                    Yeni Sekmede Aç
+                                </a>
+                                <button
+                                    onClick={() => setPdfPreviewUrl(null)}
+                                    className="p-2 rounded-lg hover:bg-muted transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 bg-muted">
+                            <iframe
+                                src={pdfPreviewUrl}
+                                className="w-full h-full border-0"
+                                title="PDF Preview"
+                            />
                         </div>
                     </div>
                 </div>
