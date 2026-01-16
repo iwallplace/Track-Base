@@ -98,8 +98,12 @@ export default function DateRangePicker({ onChange, initialRange }: DateRangePic
     // Update active preset label when language changes
     useEffect(() => {
         // Force reset to 'This Month' translated if default
-        setActivePreset(t('this_month') || 'This Month');
-    }, [language, t]);
+        const newLabel = t('this_month') || 'This Month';
+        if (activePreset !== newLabel) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setActivePreset(newLabel);
+        }
+    }, [language, t, activePreset]);
 
     // Close dropdown when clicking outside
     useEffect(() => {

@@ -19,6 +19,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         if (!isInitialized) {
             const stored = localStorage.getItem('language') as Language;
             if (stored && (stored === 'tr' || stored === 'en')) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setLanguage(stored);
             }
             setIsInitialized(true);
@@ -30,9 +31,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('language', lang);
     };
 
-    const t = (key: TranslationKey) => {
+    const t = useCallback((key: TranslationKey) => {
         return translations[language][key] || key;
-    };
+    }, [language]);
 
     return (
         <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
