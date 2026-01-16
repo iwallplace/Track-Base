@@ -25,6 +25,7 @@ interface StockCountItem {
     status: 'PENDING' | 'MATCH' | 'MISMATCH';
     difference?: number;
     saved?: boolean; // UI state for save status
+    countedAt?: string; // Timestamp when this item was counted
     material?: {
         abcClass: string | null;
         minStock: number | null;
@@ -209,6 +210,7 @@ export default function StockCountPage() {
                             status: entry.status as any,
                             difference: entry.difference,
                             saved: true,
+                            countedAt: entry.countedAt, // Include count timestamp
                             material: item.material // Passthrough material data
                         };
                     } else {
@@ -252,9 +254,10 @@ export default function StockCountPage() {
             });
 
             if (res.ok) {
-                // Update saved state locally
+                const savedEntry = await res.json();
+                // Update saved state locally with countedAt
                 setItems(prev => prev.map(item =>
-                    item.id === id ? { ...item, saved: true } : item
+                    item.id === id ? { ...item, saved: true, countedAt: savedEntry.countedAt } : item
                 ));
             } else {
                 showToast('Kaydedilemedi', 'error');
@@ -1014,14 +1017,28 @@ export default function StockCountPage() {
                                                         {!blindMode && (
                                                             <td className="px-6 py-4">
                                                                 {item.status === 'MATCH' && (
-                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
-                                                                        <CheckCircle className="h-4 w-4" /> Eşleşti
-                                                                    </span>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                                                                            <CheckCircle className="h-4 w-4" /> Eşleşti
+                                                                        </span>
+                                                                        {item.countedAt && (
+                                                                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                                                {format(new Date(item.countedAt), 'HH:mm', { locale: tr })}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 )}
                                                                 {item.status === 'MISMATCH' && (
-                                                                    <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-                                                                        <AlertTriangle className="h-4 w-4" /> Fark Var
-                                                                    </span>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="inline-flex items-center gap-1 text-red-600 font-medium">
+                                                                            <AlertTriangle className="h-4 w-4" /> Fark Var
+                                                                        </span>
+                                                                        {item.countedAt && (
+                                                                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                                                {format(new Date(item.countedAt), 'HH:mm', { locale: tr })}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 )}
                                                                 {item.status === 'PENDING' && (
                                                                     <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
