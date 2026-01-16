@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import ConfirmModal from '@/components/confirm-modal';
+
 
 interface StockCountItem {
     id: string; // materialReference
@@ -45,6 +45,7 @@ export default function StockCountPage() {
     // State
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionStatus, setSessionStatus] = useState<'LOADING' | 'ACTIVE' | 'NOT_STARTED'>('LOADING');
+    const [isSessionLocked, setIsSessionLocked] = useState(false);
     const [items, setItems] = useState<StockCountItem[]>([]);
     const [blindMode, setBlindMode] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -63,15 +64,36 @@ export default function StockCountPage() {
     // Today's Session State for Landing Page
     const [todayStatus, setTodayStatus] = useState<'LOADING' | 'EXISTS' | 'NONE'>('LOADING');
     const [todaySessionData, setTodaySessionData] = useState<any>(null);
-    const [endSessionModal, setEndSessionModal] = useState<{ isOpen: boolean; sessionId: string | null }>({ isOpen: false, sessionId: null });
+    const [canReset, setCanReset] = useState(false);
 
     // Initial Load - Check both history and today's status
     useEffect(() => {
         if (session) {
             loadHistory();
             checkTodayStatus();
+            checkPermissions();
         }
     }, [session]);
+
+    const checkPermissions = async () => {
+        if (session?.user?.role === 'ADMIN') {
+            setCanReset(true);
+            return;
+        }
+        try {
+            const res = await fetch('/api/permissions');
+            if (res.ok) {
+                const data = await res.json();
+                const perms = data.data?.permissions || data.permissions;
+                const role = session?.user?.role || '';
+                if (perms && perms[role] && perms[role]['stock-count.reset']) {
+                    setCanReset(true);
+                }
+            }
+        } catch (e) {
+            console.error("Permission check failed", e);
+        }
+    };
 
     // When switching to active tab, ensure data is loaded for selected countDate
     useEffect(() => {
@@ -109,6 +131,7 @@ export default function StockCountPage() {
                 // Session exists, load it
                 setSessionId(data.id);
                 setSessionStatus('ACTIVE');
+                setIsSessionLocked(data.status === 'COMPLETED');
                 await loadInventoryWithSession(data.entries || []);
             } else {
                 // No session
@@ -137,6 +160,7 @@ export default function StockCountPage() {
                 const data = await res.json();
                 setSessionId(data.id);
                 setSessionStatus('ACTIVE');
+                setIsSessionLocked(false);
                 await loadInventoryWithSession([]);
 
                 // Update today status
@@ -156,11 +180,9 @@ export default function StockCountPage() {
         }
     };
 
-    const handleConfirmEndSession = async () => {
-        const sid = endSessionModal.sessionId;
+    const handleConfirmEndSession = async (sid: string) => {
         if (!sid) return;
 
-        setEndSessionModal({ isOpen: false, sessionId: null });
         setLoading(true);
 
         try {
@@ -236,7 +258,7 @@ export default function StockCountPage() {
     };
 
     const saveCount = async (id: string, countedVal: number | '', systemStock: number) => {
-        if (!sessionId || countedVal === '') return;
+        if (!sessionId || countedVal === '' || isSessionLocked) return;
 
         setSavingItem(id);
 
@@ -592,8 +614,14 @@ export default function StockCountPage() {
                                                         .then(res => res.json())
                                                         .then(data => {
                                                             if (data?.id) {
-                                                                setSessionId(data.id);
-                                                                setEndSessionModal({ isOpen: true, sessionId: data.id });
+                                                                showToast(
+                                                                    'Sayımı bitirmek istiyor musunuz? Bu işlem geri alınamaz.',
+                                                                    'info',
+                                                                    {
+                                                                        label: 'Evet, Bitir',
+                                                                        onClick: () => handleConfirmEndSession(data.id)
+                                                                    }
+                                                                );
                                                             }
                                                         });
                                                 }}
@@ -622,6 +650,7 @@ export default function StockCountPage() {
                                         <th className="px-6 py-4 font-medium text-center">Toplam Kalem</th>
                                         <th className="px-6 py-4 font-medium text-center">Farklı Kalem</th>
                                         <th className="px-6 py-4 font-medium">Çalışılan Günler</th>
+                                        <th className="px-6 py-4 font-medium">Bitim Saati</th>
                                         <th className="px-6 py-4 font-medium text-center">Durum</th>
                                         <th className="px-6 py-4 font-medium text-right">İşlem</th>
                                     </tr>
@@ -629,14 +658,14 @@ export default function StockCountPage() {
                                 <tbody className="divide-y divide-border">
                                     {loading && historySessions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                                                 <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
                                                 Geçmiş yükleniyor...
                                             </td>
                                         </tr>
                                     ) : historySessions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                                                 Henüz tamamlanmış bir sayım kaydı yok.
                                             </td>
                                         </tr>
@@ -668,6 +697,9 @@ export default function StockCountPage() {
                                                     </td>
                                                     <td className="px-6 py-4 text-muted-foreground text-xs">
                                                         {workDaysFormatted || <span className="italic">-</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-muted-foreground font-mono text-xs">
+                                                        {session.completedAt ? format(new Date(session.completedAt), 'HH:mm') : '-'}
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
                                                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED'
@@ -987,11 +1019,13 @@ export default function StockCountPage() {
                                                                 <input
                                                                     type="number"
                                                                     min="0"
+                                                                    disabled={isSessionLocked}
                                                                     value={item.countedStock}
                                                                     onChange={(e) => handleCountChange(item.id, e.target.value)}
-                                                                    className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 ${!blindMode && item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
-                                                                        !blindMode && item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
-                                                                            'border-input bg-background'
+                                                                    className={`w-full text-right rounded-md border px-3 py-1.5 focus:outline-none font-bold font-mono pl-8 transition-colors ${isSessionLocked ? 'bg-muted text-muted-foreground cursor-not-allowed' :
+                                                                        (!blindMode && item.status === 'MATCH' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700' :
+                                                                            !blindMode && item.status === 'MISMATCH' ? 'border-red-500 bg-red-500/10 text-red-700' :
+                                                                                'border-input bg-background')
                                                                         }`}
                                                                     placeholder="0"
                                                                 />
@@ -1068,15 +1102,7 @@ export default function StockCountPage() {
                 </>
             )}
             {/* End Session Confirm Modal */}
-            <ConfirmModal
-                isOpen={endSessionModal.isOpen}
-                onClose={() => setEndSessionModal({ isOpen: false, sessionId: null })}
-                onConfirm={handleConfirmEndSession}
-                title="Sayımı Bitir"
-                description="Sayımı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz ve sonuçlar kesinleşecektir."
-                confirmText="Bitir"
-                variant="danger"
-            />
+
         </div>
     );
 }

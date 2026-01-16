@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Lock, Mail, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/components/language-provider';
+import { useToast } from '@/components/toast';
 
 export default function SettingsPage() {
     const { data: session, update } = useSession();
     const { t } = useLanguage();
+    const { showToast } = useToast();
+
     // useLanguage comes from '@/lib/hooks/useLanguage' really
     // Wait, the import says '@/components/language-provider', let's check if it exports t
     // Actually standard hook is 'useLanguage' from lib.
@@ -19,7 +22,6 @@ export default function SettingsPage() {
     // Actually, looking at DateRangePicker, I imported from '@/lib/hooks/useLanguage'.
     // I should do same here.
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
 
     const [formData, setFormData] = useState({
         name: session?.user?.name || '',
@@ -39,11 +41,10 @@ export default function SettingsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage({ type: '', text: '' });
         setLoading(true);
 
         if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-            setMessage({ type: 'error', text: 'Yeni şifreler eşleşmiyor.' });
+            showToast('Yeni şifreler eşleşmiyor.', 'error');
             setLoading(false);
             return;
         }
@@ -62,21 +63,21 @@ export default function SettingsPage() {
             });
 
             if (res.ok) {
-                setMessage({ type: 'success', text: 'Profil başarıyla güncellendi.' });
+                showToast('Profil başarıyla güncellendi.', 'success');
                 // Ideally update session client side
                 await update({ name: formData.name, image: formData.image });
                 setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
             } else {
                 try {
                     const data = await res.json();
-                    setMessage({ type: 'error', text: data.error || 'Güncelleme başarısız.' });
+                    showToast(data.error || 'Güncelleme başarısız.', 'error');
                 } catch {
                     const text = await res.text();
-                    setMessage({ type: 'error', text: text || 'Güncelleme başarısız.' });
+                    showToast(text || 'Güncelleme başarısız.', 'error');
                 }
             }
         } catch (error) {
-            setMessage({ type: 'error', text: 'Bir hata oluştu.' });
+            showToast('Bir hata oluştu.', 'error');
         } finally {
             setLoading(false);
         }
@@ -235,15 +236,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </div>
-
-                {/* Feedback Message */}
-                {message.text && (
-                    <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                        }`}>
-                        {message.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-                        <p className="text-sm font-medium">{message.text}</p>
-                    </div>
-                )}
 
                 <div className="flex justify-end">
                     <button

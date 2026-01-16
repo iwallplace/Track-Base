@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, UserPlus, Shield, ShieldAlert, Key, ChevronDown, ChevronUp, Pencil, Loader2, RotateCcw, Plus, Tag } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import EditUserModal from './edit-user-modal';
@@ -29,6 +29,7 @@ interface Role {
 interface PermissionsData {
     permissions: Record<string, Record<string, boolean>>;
     labels: Record<string, string>;
+    categories: Record<string, string[]>;
     roleLabels: Record<string, string>;
 }
 
@@ -437,32 +438,71 @@ export default function UsersPage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
-                                                {Object.entries(permissionsData.labels).map(([permKey, permLabel]) => (
-                                                    <tr key={permKey} className="hover:bg-muted/50">
-                                                        <td className="py-3 pr-4 text-foreground">{permLabel}</td>
-                                                        {roles.map((role) => {
-                                                            const granted = permissionsData.permissions[role.name]?.[permKey] ?? false;
-                                                            const isUpdating = updatingPerm === `${role.name}-${permKey}`;
-                                                            const isProtected = role.name === 'ADMIN';
+                                                <tbody className="divide-y divide-border">
+                                                    {permissionsData.categories && Object.entries(permissionsData.categories).map(([category, perms]) => (
+                                                        <React.Fragment key={category}>
+                                                            <tr className="bg-muted/30">
+                                                                <td colSpan={roles.length + 1} className="py-2.5 px-4 font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+                                                                    {category}
+                                                                </td>
+                                                            </tr>
+                                                            {perms.map((permKey) => (
+                                                                <tr key={permKey} className="hover:bg-muted/50 group">
+                                                                    <td className="py-3 pr-4 pl-4 text-foreground text-sm border-r border-border/50">
+                                                                        {permissionsData.labels[permKey]}
+                                                                    </td>
+                                                                    {roles.map((role) => {
+                                                                        const granted = permissionsData.permissions[role.name]?.[permKey] ?? false;
+                                                                        const isUpdating = updatingPerm === `${role.name}-${permKey}`;
+                                                                        const isProtected = role.name === 'ADMIN';
 
-                                                            return (
-                                                                <td key={role.name} className="py-3 px-4 text-center">
-                                                                    <button
-                                                                        onClick={() => !isProtected && handleTogglePermission(role.name, permKey, granted)}
-                                                                        disabled={isUpdating || isProtected}
-                                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-background
+                                                                        return (
+                                                                            <td key={role.name} className="py-3 px-4 text-center">
+                                                                                <button
+                                                                                    onClick={() => !isProtected && handleTogglePermission(role.name, permKey, granted)}
+                                                                                    disabled={isUpdating || isProtected}
+                                                                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-background
+                                                                                    ${granted ? 'bg-emerald-600' : 'bg-muted-foreground/30'}
+                                                                                    ${isProtected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}
+                                                                                `}
+                                                                                >
+                                                                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${granted ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                                                                </button>
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            ))}
+                                                        </React.Fragment>
+                                                    ))}
+
+                                                    {/* Fallback for unclassified permissions if any (backward compatibility) */}
+                                                    {!permissionsData.categories && Object.entries(permissionsData.labels).map(([permKey, permLabel]) => (
+                                                        <tr key={permKey} className="hover:bg-muted/50">
+                                                            <td className="py-3 pr-4 text-foreground">{permLabel}</td>
+                                                            {roles.map((role) => {
+                                                                const granted = permissionsData.permissions[role.name]?.[permKey] ?? false;
+                                                                const isUpdating = updatingPerm === `${role.name}-${permKey}`;
+                                                                const isProtected = role.name === 'ADMIN';
+
+                                                                return (
+                                                                    <td key={role.name} className="py-3 px-4 text-center">
+                                                                        <button
+                                                                            onClick={() => !isProtected && handleTogglePermission(role.name, permKey, granted)}
+                                                                            disabled={isUpdating || isProtected}
+                                                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-background
                                                                             ${granted ? 'bg-emerald-600' : 'bg-muted-foreground'}
                                                                             ${isProtected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}
                                                                         `}
-                                                                    >
-                                                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${granted ? 'translate-x-6' : 'translate-x-1'}`} />
-                                                                    </button>
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
+                                                                        >
+                                                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${granted ? 'translate-x-6' : 'translate-x-1'}`} />
+                                                                        </button>
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
                                         </table>
                                     </div>
                                 </>

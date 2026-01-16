@@ -40,6 +40,7 @@ export async function GET(req: Request) {
                 mismatchCount: s.entries.filter(e => e.status === 'MISMATCH').length,
                 status: s.status,
                 workDays: (s as any).workDays || [], // Include work days
+                completedAt: s.completedAt, // Include completion time
                 entries: s.entries // Include entries for detailed view
             }));
 
@@ -126,7 +127,10 @@ export async function PATCH(req: Request) {
         if (action === 'complete') {
             const updated = await prisma.stockCountSession.update({
                 where: { id: sessionId },
-                data: { status: 'COMPLETED' }
+                data: {
+                    status: 'COMPLETED',
+                    completedAt: new Date() // Set completion time
+                }
             });
             return NextResponse.json(updated);
         }

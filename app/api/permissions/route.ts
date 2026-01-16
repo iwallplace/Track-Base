@@ -45,7 +45,17 @@ const PERMISSION_LABELS: Record<string, string> = {
     // Malzeme & Stok Sayımı
     'materials.manage': 'Malzeme tanımları düzenleme',
     'stock-count.view': 'Stok sayımı görüntüleme',
-    'stock-count.manage': 'Stok sayımı yapma'
+    'stock-count.manage': 'Stok sayımı yapma',
+    'stock-count.reset': 'Stok sayımını sıfırlama/yeniden açma'
+};
+
+const PERMISSION_CATEGORIES: Record<string, string[]> = {
+    'Veri Erişimi': ['data.view'],
+    'Envanter': ['inventory.view', 'inventory.create', 'inventory.delete', 'inventory.export'],
+    'Kullanıcı Yönetimi': ['users.view', 'users.create', 'users.create.any-role', 'users.edit', 'users.delete', 'users.restore', 'users.role.change', 'roles.manage'],
+    'Sistem Ayarları': ['settings.view', 'settings.edit'],
+    'Özellikler': ['ai.use', 'reports.view', 'audit.view', 'notifications.view', 'system.status.view'],
+    'Malzeme & Stok': ['materials.manage', 'stock-count.view', 'stock-count.manage', 'stock-count.reset']
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -95,6 +105,7 @@ export async function GET() {
         return successResponse({
             permissions: grouped,
             labels: PERMISSION_LABELS,
+            categories: PERMISSION_CATEGORIES,
             roleLabels: roleLabels
         });
     } catch (error) {
