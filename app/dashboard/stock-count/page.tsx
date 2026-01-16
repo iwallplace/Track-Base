@@ -618,6 +618,7 @@ export default function StockCountPage() {
                                         <th className="px-6 py-4 font-medium">Kullanıcı</th>
                                         <th className="px-6 py-4 font-medium text-center">Toplam Kalem</th>
                                         <th className="px-6 py-4 font-medium text-center">Farklı Kalem</th>
+                                        <th className="px-6 py-4 font-medium">Çalışılan Günler</th>
                                         <th className="px-6 py-4 font-medium text-center">Durum</th>
                                         <th className="px-6 py-4 font-medium text-right">İşlem</th>
                                     </tr>
@@ -625,65 +626,87 @@ export default function StockCountPage() {
                                 <tbody className="divide-y divide-border">
                                     {loading && historySessions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                                                 <RotateCcw className="h-6 w-6 animate-spin mx-auto mb-2" />
                                                 Geçmiş yükleniyor...
                                             </td>
                                         </tr>
                                     ) : historySessions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                                                 Henüz tamamlanmış bir sayım kaydı yok.
                                             </td>
                                         </tr>
                                     ) : (
-                                        historySessions.map((session) => (
-                                            <tr key={session.id} className="hover:bg-muted/50 transition-colors">
-                                                <td className="px-6 py-4 font-medium">{format(new Date(session.date), 'dd MMMM yyyy', { locale: tr })}</td>
-                                                <td className="px-6 py-4 text-muted-foreground">{session.user}</td>
-                                                <td className="px-6 py-4 text-center font-mono">{session.totalItems}</td>
-                                                <td className="px-6 py-4 text-center font-mono font-bold">
-                                                    {session.mismatchCount > 0 ? (
-                                                        <span className="text-red-600">{session.mismatchCount}</span>
-                                                    ) : (
-                                                        <span className="text-emerald-600">0</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {(() => {
-                                                        const sessionDate = new Date(session.date);
-                                                        const today = new Date();
-                                                        today.setHours(0, 0, 0, 0);
-                                                        sessionDate.setHours(0, 0, 0, 0);
-                                                        const isPastDay = sessionDate < today;
-                                                        const isIncomplete = session.status !== 'COMPLETED' && isPastDay;
+                                        historySessions.map((session) => {
+                                            const sessionDate = new Date(session.date);
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            sessionDate.setHours(0, 0, 0, 0);
+                                            const isPastDay = sessionDate < today;
+                                            const isIncomplete = session.status !== 'COMPLETED' && isPastDay;
 
-                                                        return (
-                                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED'
-                                                                    ? 'bg-blue-500/10 text-blue-600'
-                                                                    : isIncomplete
-                                                                        ? 'bg-red-500/10 text-red-600'
-                                                                        : 'bg-amber-500/10 text-amber-600'
-                                                                }`}>
-                                                                {session.status === 'COMPLETED'
-                                                                    ? 'Tamamlandı'
-                                                                    : isIncomplete
-                                                                        ? 'Yarım Kaldı'
-                                                                        : 'Devam Ediyor'}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => handleHistoryClick(session.date)}
-                                                        className="text-blue-600 hover:underline text-xs flex items-center justify-end gap-1 ml-auto"
-                                                    >
-                                                        Detay Gör <Search className="h-3 w-3" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
+                                            // Format work days
+                                            const workDaysFormatted = (session.workDays || [])
+                                                .map((d: string) => format(new Date(d), 'd MMM', { locale: tr }))
+                                                .join(', ');
+
+                                            return (
+                                                <tr key={session.id} className="hover:bg-muted/50 transition-colors">
+                                                    <td className="px-6 py-4 font-medium">{format(new Date(session.date), 'dd MMMM yyyy', { locale: tr })}</td>
+                                                    <td className="px-6 py-4 text-muted-foreground">{session.user}</td>
+                                                    <td className="px-6 py-4 text-center font-mono">{session.totalItems}</td>
+                                                    <td className="px-6 py-4 text-center font-mono font-bold">
+                                                        {session.mismatchCount > 0 ? (
+                                                            <span className="text-red-600">{session.mismatchCount}</span>
+                                                        ) : (
+                                                            <span className="text-emerald-600">0</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-muted-foreground text-xs">
+                                                        {workDaysFormatted || <span className="italic">-</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED'
+                                                            ? 'bg-blue-500/10 text-blue-600'
+                                                            : isIncomplete
+                                                                ? 'bg-red-500/10 text-red-600'
+                                                                : 'bg-amber-500/10 text-amber-600'
+                                                            }`}>
+                                                            {session.status === 'COMPLETED'
+                                                                ? 'Tamamlandı'
+                                                                : isIncomplete
+                                                                    ? 'Yarım Kaldı'
+                                                                    : 'Devam Ediyor'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {/* Devam Et button for incomplete sessions */}
+                                                            {isIncomplete && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSessionId(session.id);
+                                                                        setCountDate(format(new Date(session.date), 'yyyy-MM-dd'));
+                                                                        setActiveTab('active');
+                                                                    }}
+                                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors"
+                                                                >
+                                                                    <PlayCircle className="h-3 w-3" />
+                                                                    Devam Et
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => handleHistoryClick(session.date)}
+                                                                className="text-blue-600 hover:underline text-xs flex items-center gap-1"
+                                                            >
+                                                                Detay Gör <Search className="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>

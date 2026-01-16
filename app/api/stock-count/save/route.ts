@@ -26,7 +26,12 @@ export async function POST(req: Request) {
 
         // Verify session belongs to user
         const stockSession = await prisma.stockCountSession.findUnique({
-            where: { id: sessionId }
+            where: { id: sessionId },
+            select: {
+                id: true,
+                createdById: true,
+                workDays: true
+            }
         });
 
         if (!stockSession) {
@@ -74,6 +79,26 @@ export async function POST(req: Request) {
                 note
             }
         });
+
+        // Add today to workDays if not already present
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const existingWorkDays = stockSession.workDays || [];
+        const todayAlreadyLogged = existingWorkDays.some((d: Date) => {
+            const existing = new Date(d);
+            existing.setHours(0, 0, 0, 0);
+            return existing.getTime() === today.getTime();
+        });
+
+        if (!todayAlreadyLogged) {
+            await prisma.stockCountSession.update({
+                where: { id: sessionId },
+                data: {
+                    workDays: { push: today }
+                }
+            });
+        }
 
         return NextResponse.json(entry);
 

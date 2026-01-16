@@ -153,6 +153,7 @@ model StockCountSession {
   sessionDate  DateTime            // The date this count is for
   status       String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, CANCELLED
   notes        String?             // Optional notes about the session
+  workDays     DateTime[]          // Array of dates when work was done on this session
   createdBy    User                @relation(fields: [createdById], references: [id])
   createdById  String
   createdAt    DateTime            @default(now())

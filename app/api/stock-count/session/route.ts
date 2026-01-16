@@ -27,7 +27,7 @@ export async function GET(req: Request) {
                 orderBy: { sessionDate: 'desc' },
                 include: {
                     createdBy: { select: { name: true, email: true } },
-                    entries: { select: { status: true } }
+                    entries: { select: { status: true, countedAt: true, materialReference: true } }
                 },
                 take: 50 // Limit to last 50 sessions
             });
@@ -38,7 +38,9 @@ export async function GET(req: Request) {
                 user: s.createdBy.name || s.createdBy.email,
                 totalItems: s.entries.length,
                 mismatchCount: s.entries.filter(e => e.status === 'MISMATCH').length,
-                status: s.status
+                status: s.status,
+                workDays: (s as any).workDays || [], // Include work days
+                entries: s.entries // Include entries for detailed view
             }));
 
             return NextResponse.json(history);
