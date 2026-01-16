@@ -5,14 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-if (!supabaseUrl || !supabaseKey) {
-    // Warn only in development, or handle gracefully
-    console.warn('Supabase URL or Key is missing. Storage features may not work.');
-}
-
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function uploadWaybill(file: File, referenceId: string): Promise<string | null> {
+export async function uploadWaybill(file: File, referenceId: string): Promise<{ path: string | null; error: string | null }> {
     try {
         const fileExt = file.name.split('.').pop();
         const fileName = `waybills/${referenceId}_${Date.now()}.${fileExt}`;
@@ -23,12 +18,12 @@ export async function uploadWaybill(file: File, referenceId: string): Promise<st
 
         if (error) {
             console.error('Supabase Upload Error:', error);
-            throw error;
+            return { path: null, error: error.message };
         }
 
-        return data.path; // Return path for usage with Signed URLs
-    } catch (error) {
+        return { path: data.path, error: null }; // Return path for usage with Signed URLs
+    } catch (error: any) {
         console.error('Upload Failed:', error);
-        return null;
+        return { path: null, error: error.message || 'Bilinmeyen bir hata oluştu' };
     }
 }

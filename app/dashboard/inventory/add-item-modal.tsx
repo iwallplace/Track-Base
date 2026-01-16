@@ -304,20 +304,30 @@ export default function AddItemModal({ isOpen, onClose, onSuccess, mode, initial
                                         setPdfError(null);
 
                                         try {
-                                            const { uploadWaybill } = await import('@/lib/supabase');
-                                            const path = await uploadWaybill(file, formData.waybillNo || 'temp');
-                                            if (path) {
-                                                setFormData({ ...formData, waybillUrl: path });
+                                            const uploadFormData = new FormData(); // Renamed to avoid conflict with outer formData
+                                            uploadFormData.append('file', file);
+                                            uploadFormData.append('waybillNo', formData.waybillNo || 'temp');
+
+                                            const res = await fetch('/api/upload', {
+                                                method: 'POST',
+                                                body: uploadFormData, // Use the new FormData object
+                                            });
+
+                                            const data = await res.json();
+
+                                            if (res.ok && data.path) {
+                                                setFormData({ ...formData, waybillUrl: data.path });
                                                 showToast("PDF başarıyla yüklendi", 'success');
                                             } else {
-                                                setPdfError("PDF yüklenemedi");
-                                                showToast("PDF yüklenemedi", 'error');
+                                                const errorMsg = data.error || "PDF yüklenemedi";
+                                                setPdfError(errorMsg);
+                                                showToast(errorMsg, 'error');
                                                 e.target.value = '';
                                             }
                                         } catch (error) {
                                             console.error(error);
-                                            setPdfError("Yükleme hatası");
-                                            showToast("Yükleme hatası", 'error');
+                                            setPdfError("Yükleme hatası (Sunucuya erişilemedi)");
+                                            showToast("Yükleme hatası (Sunucuya erişilemedi)", 'error');
                                             e.target.value = '';
                                         } finally {
                                             setPdfUploading(false);
