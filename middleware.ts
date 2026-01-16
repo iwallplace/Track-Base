@@ -73,5 +73,6 @@ export const config = {
         "/api/roles/:path*",
         "/api/materials/:path*",
         "/api/storage/:path*",
+        "/api/upload/:path*",
     ],
 };
