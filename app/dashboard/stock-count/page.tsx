@@ -650,10 +650,29 @@ export default function StockCountPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
-                                                        }`}>
-                                                        {session.status === 'COMPLETED' ? 'Tamamlandı' : 'Devam Ediyor'}
-                                                    </span>
+                                                    {(() => {
+                                                        const sessionDate = new Date(session.date);
+                                                        const today = new Date();
+                                                        today.setHours(0, 0, 0, 0);
+                                                        sessionDate.setHours(0, 0, 0, 0);
+                                                        const isPastDay = sessionDate < today;
+                                                        const isIncomplete = session.status !== 'COMPLETED' && isPastDay;
+
+                                                        return (
+                                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.status === 'COMPLETED'
+                                                                    ? 'bg-blue-500/10 text-blue-600'
+                                                                    : isIncomplete
+                                                                        ? 'bg-red-500/10 text-red-600'
+                                                                        : 'bg-amber-500/10 text-amber-600'
+                                                                }`}>
+                                                                {session.status === 'COMPLETED'
+                                                                    ? 'Tamamlandı'
+                                                                    : isIncomplete
+                                                                        ? 'Yarım Kaldı'
+                                                                        : 'Devam Ediyor'}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button
